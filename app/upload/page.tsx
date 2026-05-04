@@ -2,6 +2,7 @@
 
 import { useEffect, useMemo, useRef, useState } from 'react';
 import { getSupabaseClient } from '@/lib/supabase/client';
+import { LAST_MODEL_LS } from '@/lib/companion-overlay/constants';
 import { validateFiles, getValidationConstants } from '@/lib/uploads/validation';
 
 const { MAX_FILE_SIZE } = getValidationConstants();
@@ -196,11 +197,20 @@ export default function UploadPage() {
         }
 
         if (st === 'success') {
+          const mu = typeof payload.model_url === 'string' ? payload.model_url : '';
           setGenSuccess({
-            model_url: typeof payload.model_url === 'string' ? payload.model_url : '',
+            model_url: mu,
             thumbnail_url:
               typeof payload.thumbnail_url === 'string' ? payload.thumbnail_url : null,
           });
+          try {
+            if (mu.startsWith('http')) {
+              localStorage.setItem(LAST_MODEL_LS, mu);
+              window.dispatchEvent(new Event('pet2companion-model-ready'));
+            }
+          } catch {
+            /* quota / deny */
+          }
           setGenMessage(null);
           setGenWarning(null);
           setGenPhase(null);
