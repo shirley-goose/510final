@@ -12,10 +12,12 @@ create table if not exists public.pet_uploads (
 
 alter table public.pet_uploads enable row level security;
 
+drop policy if exists "Users can read their uploads" on public.pet_uploads;
 create policy "Users can read their uploads" on public.pet_uploads
 for select
 using (auth.uid() = user_id);
 
+drop policy if exists "Users can insert their uploads" on public.pet_uploads;
 create policy "Users can insert their uploads" on public.pet_uploads
 for insert
 with check (auth.uid() = user_id);
@@ -26,6 +28,7 @@ values ('pet-uploads', 'pet-uploads', false)
 on conflict (id) do nothing;
 
 -- Storage policies (Supabase Storage is in storage.objects)
+drop policy if exists "Users can upload to their folder" on storage.objects;
 create policy "Users can upload to their folder" on storage.objects
 for insert
 with check (
@@ -33,6 +36,7 @@ with check (
   and auth.uid()::text = (storage.foldername(name))[2]
 );
 
+drop policy if exists "Users can read their folder" on storage.objects;
 create policy "Users can read their folder" on storage.objects
 for select
 using (
