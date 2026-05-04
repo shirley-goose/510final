@@ -1,0 +1,92 @@
+.companion-overlay-scope {
+  box-sizing: border-box;
+}
+
+.companion-overlay-shell {
+  pointer-events: none;
+  opacity: 0.98;
+  border-radius: 16px;
+  outline: none;
+  background: radial-gradient(
+      ellipse 120% 80% at 50% -20%,
+      rgba(255, 226, 180, 0.35),
+      transparent 55%
+    ),
+    rgba(255, 255, 255, 0.32);
+  backdrop-filter: blur(14px);
+  box-shadow:
+    0 18px 48px rgba(15, 20, 35, 0.18),
+    0 2px 0 rgba(255, 255, 255, 0.45) inset;
+  border: 1px solid rgba(255, 255, 255, 0.55);
+}
+
+.companion-overlay-chrome.companion-drag-target {
+  height: 36px;
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 6px;
+  padding: 6px 8px;
+  cursor: grab;
+  border-radius: 16px 16px 0 0;
+  pointer-events: auto;
+}
+
+.companion-overlay-shell:active .companion-overlay-chrome {
+  cursor: grabbing;
+}
+
+.companion-drag-hint {
+  pointer-events: none;
+  user-select: none;
+  flex: 1;
+  font-size: 11px;
+  font-weight: 600;
+  color: rgba(30, 30, 30, 0.78);
+}
+
+.companion-mini-btn {
+  pointer-events: auto;
+  cursor: pointer;
+  font: inherit;
+  font-size: 11px;
+  font-weight: 600;
+  border: none;
+  border-radius: 8px;
+  padding: 4px 8px;
+  background: rgba(46, 46, 46, 0.9);
+  color: #fff;
+}
+
+.companion-mini-btn:active {
+  transform: translateY(0.5px);
+}
+
+/* Prevent drag-strip pointer handlers from bubbling into shell drag */
+.companion-no-drag {
+  touch-action: manipulation;
+}
+
+.companion-overlay-gl {
+  width: 100%;
+  height: calc(var(--overlay-h, 296px) - 36px - 28px);
+  border-radius: 0 0 16px 16px;
+  overflow: hidden;
+  pointer-events: none;
+}
+
+.companion-overlay-scope {
+  --overlay-h: 296px;
+  height: var(--overlay-h);
+}
+
+.companion-desktop-note {
+  display: block;
+  padding: 4px 10px 6px;
+  font-size: 9px;
+  line-height: 1.35;
+  color: rgba(30, 30, 30, 0.6);
+  text-align: center;
+  pointer-events: none;
+  user-select: none;
+}
