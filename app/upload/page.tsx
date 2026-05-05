@@ -70,7 +70,7 @@ export default function UploadPage() {
     return () => {
       authListener.subscription.unsubscribe();
     };
-  }, []);
+  }, [supabaseClient]);
 
   const fileSummary = useMemo(() => {
     return files.map((file) => ({
