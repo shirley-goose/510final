@@ -10,6 +10,7 @@ import {
   tripoPrimaryModelUrl,
 } from '@/lib/generation/providers/tripo';
 import { GENERATION_SERVER_DEADLINE_MS, getActiveAiProvider } from '@/lib/generation/config';
+import { parseCompanionPersonality } from '@/lib/companion-overlay/personalities';
 
 export const runtime = 'nodejs';
 
@@ -568,11 +569,14 @@ export async function POST(req: NextRequest) {
   const name =
     typeof raw.name === 'string' && raw.name.trim().length > 0 ? raw.name.trim() : 'My companion';
 
+  const personality = parseCompanionPersonality(raw.personality);
+
   const { data: created, error: createErr } = await supabaseAdmin
     .from('companions')
     .insert({
       user_id: auth.user.id,
       name,
+      personality,
       status: 'pending',
       source_upload_ids: idStrings,
       generation_started_at: new Date().toISOString(),

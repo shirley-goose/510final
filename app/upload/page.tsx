@@ -3,6 +3,7 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
 import { getSupabaseClient } from '@/lib/supabase/client';
 import { LAST_MODEL_LS } from '@/lib/companion-overlay/constants';
+import type { CompanionPersonality } from '@/lib/companion-overlay/personalities';
 import { validateFiles, getValidationConstants } from '@/lib/uploads/validation';
 
 const { MAX_FILE_SIZE } = getValidationConstants();
@@ -28,6 +29,7 @@ export default function UploadPage() {
   const fileInputRef = useRef<HTMLInputElement | null>(null);
 
   const [lastUploadIds, setLastUploadIds] = useState<string[] | null>(null);
+  const [companionPersonality, setCompanionPersonality] = useState<CompanionPersonality>('calm');
 
   /** Active companion polled by GET /api/generate */
   const [pollingCompanionId, setPollingCompanionId] = useState<string | null>(null);
@@ -284,7 +286,7 @@ export default function UploadPage() {
           Authorization: `Bearer ${sessionToken}`,
           'Content-Type': 'application/json',
         },
-        body: JSON.stringify({ upload_ids: lastUploadIds }),
+        body: JSON.stringify({ upload_ids: lastUploadIds, personality: companionPersonality }),
       });
       const data = (await res.json()) as { companion_id?: string; error?: string };
 
@@ -447,6 +449,34 @@ export default function UploadPage() {
                 polls Tripo until the `.glb` is ready, then saves it under the path prefix `models/` for your account
                 in Supabase Storage. Your Tripo API key (<code>tsk_…</code>) stays on the server only.
               </p>
+            </div>
+            <div style={{ display: 'grid', gap: 8 }}>
+              <strong>Companion personality</strong>
+              <p style={{ margin: 0, fontSize: 14, opacity: 0.88 }}>
+                Chooses how energetic the desktop companion feels: movement speed, sway, and playful flourishes.
+              </p>
+              <div
+                role="radiogroup"
+                aria-label="Companion personality"
+                style={{ display: 'flex', flexWrap: 'wrap', gap: 18 }}
+              >
+                {(['active', 'calm', 'playful'] as const).map((p) => (
+                  <label
+                    key={p}
+                    style={{ display: 'flex', gap: 8, alignItems: 'center', cursor: 'pointer' }}
+                  >
+                    <input
+                      type="radio"
+                      name="companion-personality"
+                      value={p}
+                      checked={companionPersonality === p}
+                      onChange={() => setCompanionPersonality(p)}
+                      disabled={!!pollingCompanionId && !genSuccess}
+                    />
+                    <span style={{ textTransform: 'capitalize' }}>{p}</span>
+                  </label>
+                ))}
+              </div>
             </div>
             <div style={{ display: 'flex', flexWrap: 'wrap', gap: 12 }}>
               <button
