@@ -360,12 +360,25 @@ export default function UploadPage() {
   return (
     <main>
       <div className="card" style={{ display: 'grid', gap: 20 }}>
-        <div>
-          <span className="badge">Step 1</span>
-          <h1 style={{ margin: '12px 0 6px' }}>Upload pet photos</h1>
-          <p style={{ margin: 0 }}>
-            Drag & drop 1–5 JPEG/PNG files. Max 10MB each.
-          </p>
+        <div
+          style={{
+            display: 'flex',
+            flexWrap: 'wrap',
+            gap: 16,
+            justifyContent: 'space-between',
+            alignItems: 'flex-start',
+          }}
+        >
+          <div>
+            <span className="badge">Step 1</span>
+            <h1 style={{ margin: '12px 0 6px' }}>Upload pet photos</h1>
+            <p style={{ margin: 0 }}>
+              Drag & drop 1–5 JPEG/PNG files. Max 10MB each.
+            </p>
+          </div>
+          <a className="btn secondary" href="/dashboard" style={{ padding: '8px 14px', fontSize: 14 }}>
+            Dashboard
+          </a>
         </div>
 
         {!sessionToken && (

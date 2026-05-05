@@ -10,6 +10,7 @@ export default function HomePage() {
         </p>
         <div style={{ display: 'flex', gap: 12, flexWrap: 'wrap' }}>
           <a className="btn" href="/upload">Upload Photos</a>
+          <a className="btn secondary" href="/dashboard">Dashboard</a>
           <a className="btn secondary" href="/login">Sign In</a>
         </div>
       </div>
