@@ -17,6 +17,13 @@ import {
   loadSavedOverlayPosition,
   saveOverlayPosition,
 } from '@/lib/companion-overlay/position-storage';
+import {
+  getBehaviorAnimParams,
+  resolveBehaviorModeWithIdleThreshold,
+} from '@/lib/companion-overlay/behavior';
+import type { BehaviorMode } from '@/lib/companion-overlay/behavior';
+import type { CompanionPersonality } from '@/lib/companion-overlay/personalities';
+import { parseCompanionPersonality } from '@/lib/companion-overlay/personalities';
 import { CompanionViewerCanvas } from './CompanionViewerCanvas';
 import './companion-overlay.css';
 
@@ -54,9 +61,16 @@ function openDetachedViewerWindow() {
 export default function CompanionOverlay({ standalone = false }: CompanionOverlayProps) {
   const pathname = usePathname();
   const [modelUrl, setModelUrl] = useState<string | null>(null);
+  const [personality, setPersonality] = useState<CompanionPersonality>('calm');
   const [pos, setPos] = useState<{ left: number; top: number } | null>(() => null);
   const dragging = useRef(false);
   const dragOffset = useRef({ x: 0, y: 0 });
+  const behaviorModeRef = useRef<BehaviorMode>('idle');
+  const velocityRef = useRef({ x: 0, y: 0 });
+  const mouseRef = useRef<{ x: number; y: number }>({ x: 0, y: 0 });
+  const lastMouseRef = useRef(performance.now());
+  const posRef = useRef<{ left: number; top: number } | null>(null);
+  const animParamsRef = useRef(getBehaviorAnimParams('calm'));
 
   /** Root layout mounts this on every route; omit on dedicated pop-out page to avoid duplicates. */
   const suppressFloatingChrome =
@@ -85,7 +99,7 @@ export default function CompanionOverlay({ standalone = false }: CompanionOverla
 
       const { data: row } = await supabase
         .from('companions')
-        .select('model_url')
+        .select('model_url,personality')
         .eq('status', 'success')
         .not('model_url', 'is', null)
         .order('created_at', { ascending: false })
@@ -94,6 +108,9 @@ export default function CompanionOverlay({ standalone = false }: CompanionOverla
 
       if (row?.model_url && typeof row.model_url === 'string') {
         setModelUrl(row.model_url);
+      }
+      if (typeof row?.personality === 'string') {
+        setPersonality(parseCompanionPersonality(row.personality));
       }
     } catch {
       /* ignore transient Supabase/network errors */
@@ -174,6 +191,109 @@ export default function CompanionOverlay({ standalone = false }: CompanionOverla
     return () => window.removeEventListener('resize', onResize);
   }, []);
 
+  useEffect(() => {
+    animParamsRef.current = getBehaviorAnimParams(personality);
+  }, [personality]);
+
+  useEffect(() => {
+    posRef.current = pos;
+  }, [pos]);
+
+  useEffect(() => {
+    mouseRef.current = {
+      x: window.innerWidth / 2,
+      y: window.innerHeight / 2,
+    };
+    lastMouseRef.current = performance.now();
+  }, []);
+
+  useEffect(() => {
+    function onMouseMove(ev: MouseEvent) {
+      mouseRef.current = { x: ev.clientX, y: ev.clientY };
+      lastMouseRef.current = performance.now();
+    }
+
+    window.addEventListener('mousemove', onMouseMove, { passive: true });
+    return () => window.removeEventListener('mousemove', onMouseMove);
+  }, []);
+
+  useEffect(() => {
+    if (!modelUrl) return;
+
+    let rafId = 0;
+    let lastTs = performance.now();
+
+    function loop() {
+      rafId = window.requestAnimationFrame(loop);
+
+      const ts = performance.now();
+      const dt = Math.min(0.088, (ts - lastTs) / 1000);
+      lastTs = ts;
+
+      if (dragging.current) return;
+
+      const prev = posRef.current;
+      if (!prev) return;
+
+      const anim = animParamsRef.current;
+      const mode = resolveBehaviorModeWithIdleThreshold(ts, lastMouseRef.current, anim.idleAfterStillMs);
+      behaviorModeRef.current = mode;
+
+      const decay = Math.exp(-14 * dt);
+      const velLerp = Math.min(1, 28 * dt);
+      const clampVel = (n: number, lo: number, hi: number) => Math.max(lo, Math.min(hi, n));
+
+      if (mode !== 'follow') {
+        velocityRef.current.x *= decay;
+        velocityRef.current.y *= decay;
+        return;
+      }
+
+      const { x: mx, y: my } = mouseRef.current;
+      const rawLeft = mx - OVERLAY_OUTER_WIDTH / 2;
+      const rawTop = my - OVERLAY_OUTER_HEIGHT * 0.48;
+      const vw = window.innerWidth;
+      const vh = window.innerHeight;
+
+      const target = clampPosition(
+        rawLeft,
+        rawTop,
+        vw,
+        vh,
+        OVERLAY_OUTER_WIDTH,
+        OVERLAY_OUTER_HEIGHT
+      );
+
+      const smoothing = Math.min(1, anim.followSmoothness * dt);
+      const nextLeft = prev.left + (target.left - prev.left) * smoothing;
+      const nextTop = prev.top + (target.top - prev.top) * smoothing;
+
+      const dx = nextLeft - prev.left;
+      const dy = nextTop - prev.top;
+
+      const vxTarget = clampVel((dx / OVERLAY_OUTER_WIDTH) * 18, -1.5, 1.5);
+      const vyTarget = clampVel((dy / OVERLAY_OUTER_HEIGHT) * 14, -1.25, 1.25);
+
+      velocityRef.current.x += (vxTarget - velocityRef.current.x) * velLerp;
+      velocityRef.current.y += (vyTarget - velocityRef.current.y) * velLerp;
+
+      const clampedNext = clampPosition(
+        nextLeft,
+        nextTop,
+        vw,
+        vh,
+        OVERLAY_OUTER_WIDTH,
+        OVERLAY_OUTER_HEIGHT
+      );
+
+      posRef.current = clampedNext;
+      setPos(clampedNext);
+    }
+
+    rafId = window.requestAnimationFrame(loop);
+    return () => window.cancelAnimationFrame(rafId);
+  }, [modelUrl]);
+
   const onDragStart = (e: React.PointerEvent) => {
     if ((e.target as HTMLElement).closest('.companion-no-drag')) return;
     e.preventDefault();
@@ -199,6 +319,7 @@ export default function CompanionOverlay({ standalone = false }: CompanionOverla
       OVERLAY_OUTER_WIDTH,
       OVERLAY_OUTER_HEIGHT
     );
+    posRef.current = clamped;
     setPos(clamped);
   };
 
@@ -214,6 +335,7 @@ export default function CompanionOverlay({ standalone = false }: CompanionOverla
     }
     setPos((current) => {
       if (!current) return current;
+      posRef.current = current;
       saveOverlayPosition(current);
       return current;
     });
@@ -239,6 +361,7 @@ export default function CompanionOverlay({ standalone = false }: CompanionOverla
       OVERLAY_OUTER_HEIGHT
     );
     saveOverlayPosition(next);
+    posRef.current = next;
     setPos(next);
   };
 
@@ -295,7 +418,13 @@ export default function CompanionOverlay({ standalone = false }: CompanionOverla
         </button>
       </div>
       <div className="companion-overlay-gl">
-        <CompanionViewerCanvas url={modelUrl} />
+        <CompanionViewerCanvas
+          url={modelUrl}
+          personality={personality}
+          behaviorRef={behaviorModeRef}
+          velocityRef={velocityRef}
+          animParamsRef={animParamsRef}
+        />
       </div>
       <small className="companion-desktop-note companion-no-drag">
         Clicks pass through the 3D area. Tabs cannot float above unrelated desktop apps — use Pop-out for a small
