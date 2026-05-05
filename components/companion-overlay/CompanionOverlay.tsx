@@ -83,35 +83,80 @@ export default function CompanionOverlay({ standalone = false }: CompanionOverla
 
   const refreshModelUrl = useCallback(async () => {
     try {
-      const fromLs =
-        typeof window !== 'undefined' ? localStorage.getItem(LAST_MODEL_LS) : null;
-      if (fromLs?.startsWith('http')) {
-        setModelUrl(fromLs);
-      }
+      if (typeof window === 'undefined') return;
 
       const supabase = getSupabaseClient();
-      if (!supabase) return;
+
+      if (!supabase) {
+        const fromLs = localStorage.getItem(LAST_MODEL_LS);
+        setModelUrl(fromLs?.startsWith('http') ? fromLs : null);
+        return;
+      }
 
       const {
         data: { session },
       } = await supabase.auth.getSession();
-      if (!session) return;
 
-      const { data: row } = await supabase
+      if (!session) {
+        const fromLs = localStorage.getItem(LAST_MODEL_LS);
+        setModelUrl(fromLs?.startsWith('http') ? fromLs : null);
+        return;
+      }
+
+      const applyRow = (row: {
+        model_url?: string | null;
+        personality?: string | null;
+      }) => {
+        const mu = typeof row.model_url === 'string' ? row.model_url : null;
+        if (mu?.startsWith('http')) {
+          setModelUrl(mu);
+          try {
+            localStorage.setItem(LAST_MODEL_LS, mu);
+          } catch {
+            /* quota */
+          }
+        }
+        if (typeof row.personality === 'string') {
+          setPersonality(parseCompanionPersonality(row.personality));
+        }
+      };
+
+      const { data: activeRow } = await supabase
         .from('companions')
         .select('model_url,personality')
+        .eq('user_id', session.user.id)
+        .eq('status', 'success')
+        .eq('is_active', true)
+        .not('model_url', 'is', null)
+        .maybeSingle();
+
+      if (activeRow?.model_url && typeof activeRow.model_url === 'string') {
+        applyRow(activeRow);
+        return;
+      }
+
+      const { data: fallbackRow } = await supabase
+        .from('companions')
+        .select('model_url,personality')
+        .eq('user_id', session.user.id)
         .eq('status', 'success')
         .not('model_url', 'is', null)
         .order('created_at', { ascending: false })
         .limit(1)
         .maybeSingle();
 
-      if (row?.model_url && typeof row.model_url === 'string') {
-        setModelUrl(row.model_url);
+      if (fallbackRow?.model_url && typeof fallbackRow.model_url === 'string') {
+        applyRow(fallbackRow);
+        return;
       }
-      if (typeof row?.personality === 'string') {
-        setPersonality(parseCompanionPersonality(row.personality));
+
+      try {
+        localStorage.removeItem(LAST_MODEL_LS);
+      } catch {
+        /* ignore */
       }
+      setModelUrl(null);
+      setPersonality(parseCompanionPersonality(undefined));
     } catch {
       /* ignore transient Supabase/network errors */
     }
