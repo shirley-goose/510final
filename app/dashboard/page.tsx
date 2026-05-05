@@ -295,11 +295,14 @@ export default function DashboardPage() {
                     }}
                   >
                     {row.thumbnail_url ? (
-                      <img
-                        src={row.thumbnail_url}
-                        alt=""
-                        style={{ width: '100%', height: '100%', objectFit: 'cover' }}
-                      />
+                      <>
+                        {/* eslint-disable-next-line @next/next/no-img-element -- public Supabase URLs vary by project host */}
+                        <img
+                          src={row.thumbnail_url}
+                          alt=""
+                          style={{ width: '100%', height: '100%', objectFit: 'cover' }}
+                        />
+                      </>
                     ) : (
                       <span style={{ fontSize: 42, opacity: 0.25 }} aria-hidden>
                         🐾
