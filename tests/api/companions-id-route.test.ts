@@ -5,7 +5,25 @@ import { PATCH, DELETE } from '@/app/api/companions/[id]/route';
 const companionId = 'cccccccc-cccc-cccc-cccc-cccccccccccc';
 const userId = 'aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa';
 
-const { getUserMock } = vi.hoisted(() => ({ getUserMock: vi.fn() }));
+const { getUserMock, mockAdmin } = vi.hoisted(() => {
+  const getUserMock = vi.fn();
+  const mockAdmin = {
+    auth: {
+      getUser: getUserMock,
+    },
+    storage: {
+      from: vi.fn(() => ({
+        remove: vi.fn().mockResolvedValue({ error: null }),
+      })),
+    },
+    from: vi.fn(),
+  };
+  return { getUserMock, mockAdmin };
+});
+
+vi.mock('@/lib/supabase/server', () => ({
+  getSupabaseAdmin: () => mockAdmin,
+}));
 
 function authHeader() {
   return { Authorization: 'Bearer test-session-token' };
@@ -24,22 +42,6 @@ function buildRenameUpdateChain(result: { data: unknown; error: unknown }) {
     update: vi.fn(() => chain),
   };
 }
-
-vi.mock('@/lib/supabase/server', () => ({
-  supabaseAdmin: {
-    auth: {
-      getUser: getUserMock,
-    },
-    storage: {
-      from: vi.fn(() => ({
-        remove: vi.fn().mockResolvedValue({ error: null }),
-      })),
-    },
-    from: vi.fn(),
-  },
-}));
-
-import { supabaseAdmin } from '@/lib/supabase/server';
 
 describe('PATCH /api/companions/[id]', () => {
   beforeEach(() => {
@@ -75,7 +77,7 @@ describe('PATCH /api/companions/[id]', () => {
       headers: { ...authHeader(), 'Content-Type': 'application/json' },
       body: JSON.stringify({ name: '   ' }),
     });
-    const mockFrom = supabaseAdmin.from as ReturnType<typeof vi.fn>;
+    const mockFrom = mockAdmin.from as ReturnType<typeof vi.fn>;
     mockFrom.mockImplementation((table: string) => {
       if (table === 'companions') {
         return buildRenameUpdateChain({ data: null, error: null });
@@ -94,7 +96,7 @@ describe('PATCH /api/companions/[id]', () => {
       body: JSON.stringify({ name: '  Luna  ' }),
     });
 
-    const mockFrom = supabaseAdmin.from as ReturnType<typeof vi.fn>;
+    const mockFrom = mockAdmin.from as ReturnType<typeof vi.fn>;
     mockFrom.mockImplementation((table: string) => {
       if (table === 'companions') {
         return buildRenameUpdateChain({
@@ -118,7 +120,7 @@ describe('PATCH /api/companions/[id]', () => {
       body: JSON.stringify({ activate: true }),
     });
 
-    const mockFrom = supabaseAdmin.from as ReturnType<typeof vi.fn>;
+    const mockFrom = mockAdmin.from as ReturnType<typeof vi.fn>;
     mockFrom.mockImplementation((table: string) => {
       if (table !== 'companions') return {};
       return {
@@ -155,7 +157,7 @@ describe('PATCH /api/companions/[id]', () => {
     });
 
     let companionsFromCount = 0;
-    const mockFrom = supabaseAdmin.from as ReturnType<typeof vi.fn>;
+    const mockFrom = mockAdmin.from as ReturnType<typeof vi.fn>;
     mockFrom.mockImplementation((table: string) => {
       if (table !== 'companions') return {};
 
@@ -208,7 +210,7 @@ describe('DELETE /api/companions/[id]', () => {
       headers: authHeader(),
     });
 
-    const mockFrom = supabaseAdmin.from as ReturnType<typeof vi.fn>;
+    const mockFrom = mockAdmin.from as ReturnType<typeof vi.fn>;
     mockFrom.mockImplementation((table: string) => {
       if (table !== 'companions') return {};
       return {
@@ -230,10 +232,10 @@ describe('DELETE /api/companions/[id]', () => {
     });
 
     const removeMock = vi.fn().mockResolvedValue({ error: null });
-    const storageFrom = supabaseAdmin.storage.from as ReturnType<typeof vi.fn>;
+    const storageFrom = mockAdmin.storage.from as ReturnType<typeof vi.fn>;
     storageFrom.mockReturnValue({ remove: removeMock });
 
-    const mockFrom = supabaseAdmin.from as ReturnType<typeof vi.fn>;
+    const mockFrom = mockAdmin.from as ReturnType<typeof vi.fn>;
     mockFrom.mockImplementation((table: string) => {
       if (table !== 'companions') return {};
       return {

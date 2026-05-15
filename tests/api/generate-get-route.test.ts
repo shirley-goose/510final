@@ -2,16 +2,18 @@ import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { NextRequest } from 'next/server';
 import { GET } from '@/app/api/generate/route';
 
-const { getUserMock } = vi.hoisted(() => ({ getUserMock: vi.fn() }));
-
-vi.mock('@/lib/supabase/server', () => ({
-  supabaseAdmin: {
+const { getUserMock, mockAdmin } = vi.hoisted(() => {
+  const getUserMock = vi.fn();
+  const mockAdmin = {
     auth: { getUser: getUserMock },
     from: vi.fn(),
-  },
-}));
+  };
+  return { getUserMock, mockAdmin };
+});
 
-import { supabaseAdmin } from '@/lib/supabase/server';
+vi.mock('@/lib/supabase/server', () => ({
+  getSupabaseAdmin: () => mockAdmin,
+}));
 
 describe('GET /api/generate', () => {
   beforeEach(() => {
@@ -37,7 +39,7 @@ describe('GET /api/generate', () => {
   });
 
   it('returns 404 when companion is not found for user', async () => {
-    const mockFrom = supabaseAdmin.from as ReturnType<typeof vi.fn>;
+    const mockFrom = mockAdmin.from as ReturnType<typeof vi.fn>;
     mockFrom.mockReturnValue({
       select: vi.fn(() => ({
         eq: vi.fn().mockReturnThis(),
@@ -59,7 +61,7 @@ describe('GET /api/generate', () => {
   });
 
   it('returns success payload when companion is complete', async () => {
-    const mockFrom = supabaseAdmin.from as ReturnType<typeof vi.fn>;
+    const mockFrom = mockAdmin.from as ReturnType<typeof vi.fn>;
     mockFrom.mockReturnValue({
       select: vi.fn(() => ({
         eq: vi.fn().mockReturnThis(),

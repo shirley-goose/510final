@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { supabaseAdmin } from '@/lib/supabase/server';
+import { getSupabaseAdmin } from '@/lib/supabase/server';
 import {
   createMeshyImageTo3dTask,
   fetchMeshyImageTo3dTask,
@@ -54,7 +54,7 @@ async function getAuthedUser(req: NextRequest) {
     };
   }
   const token = authHeader.replace('Bearer ', '').trim();
-  const { data: userData, error: userError } = await supabaseAdmin.auth.getUser(token);
+  const { data: userData, error: userError } = await getSupabaseAdmin().auth.getUser(token);
   if (userError || !userData.user) {
     return {
       error: NextResponse.json({ error: 'Invalid or expired session.' }, { status: 401 }),
@@ -77,7 +77,7 @@ type CompanionRow = {
 };
 
 async function signPetImagePath(storagePath: string): Promise<string | null> {
-  const { data, error } = await supabaseAdmin.storage
+  const { data, error } = await getSupabaseAdmin().storage
     .from(PET_BUCKET)
     .createSignedUrl(storagePath, 3600);
   if (error || !data?.signedUrl) {
@@ -97,7 +97,7 @@ async function persistGeneratedOutputs(
   }
   const glbBuf = Buffer.from(await glbRes.arrayBuffer());
   const modelPath = `models/${companion.user_id}/${companion.id}.glb`;
-  const { error: glbUploadError } = await supabaseAdmin.storage.from(MODEL_BUCKET).upload(modelPath, glbBuf, {
+  const { error: glbUploadError } = await getSupabaseAdmin().storage.from(MODEL_BUCKET).upload(modelPath, glbBuf, {
     contentType: 'model/gltf-binary',
     upsert: true,
   });
@@ -106,7 +106,7 @@ async function persistGeneratedOutputs(
   }
   const {
     data: { publicUrl: modelPublicUrl },
-  } = supabaseAdmin.storage.from(MODEL_BUCKET).getPublicUrl(modelPath);
+  } = getSupabaseAdmin().storage.from(MODEL_BUCKET).getPublicUrl(modelPath);
 
   let thumbnailPublic: string | null = null;
   if (thumbnailUrl) {
@@ -114,20 +114,20 @@ async function persistGeneratedOutputs(
     if (imgRes.ok) {
       const buf = Buffer.from(await imgRes.arrayBuffer());
       const thumbPath = `models/${companion.user_id}/${companion.id}/preview.png`;
-      const { error: tErr } = await supabaseAdmin.storage.from(MODEL_BUCKET).upload(thumbPath, buf, {
+      const { error: tErr } = await getSupabaseAdmin().storage.from(MODEL_BUCKET).upload(thumbPath, buf, {
         contentType: 'image/png',
         upsert: true,
       });
       if (!tErr) {
         const {
           data: { publicUrl },
-        } = supabaseAdmin.storage.from(MODEL_BUCKET).getPublicUrl(thumbPath);
+        } = getSupabaseAdmin().storage.from(MODEL_BUCKET).getPublicUrl(thumbPath);
         thumbnailPublic = publicUrl;
       }
     }
   }
 
-  await supabaseAdmin
+  await getSupabaseAdmin()
     .from('companions')
     .update({
       status: 'success',
@@ -155,7 +155,7 @@ export async function GET(req: NextRequest) {
 
   const provider = getActiveAiProvider();
 
-  const { data: companion, error: loadError } = await supabaseAdmin
+  const { data: companion, error: loadError } = await getSupabaseAdmin()
     .from('companions')
     .select(
       'id, user_id, name, status, api_task_id, model_url, thumbnail_url, generation_error, generation_started_at, source_upload_ids'
@@ -194,7 +194,7 @@ export async function GET(req: NextRequest) {
     const elapsed = Date.now() - new Date(row.generation_started_at).getTime();
     if (elapsed > GENERATION_SERVER_DEADLINE_MS) {
       const errMsg = 'Generation timed out on our servers. Please try again.';
-      await supabaseAdmin
+      await getSupabaseAdmin()
         .from('companions')
         .update({ status: 'failed', generation_error: errMsg })
         .eq('id', row.id);
@@ -244,7 +244,7 @@ export async function GET(req: NextRequest) {
       const errMsg =
         task.error_msg?.trim() ||
         `The 3D provider reported ${st === 'cancelled' ? 'cancelled' : 'failure'}.`;
-      await supabaseAdmin
+      await getSupabaseAdmin()
         .from('companions')
         .update({
           status: 'failed',
@@ -271,7 +271,7 @@ export async function GET(req: NextRequest) {
     const glbUrl = tripoPrimaryModelUrl(task);
     if (!glbUrl) {
       const errMsg = 'Tripo finished but returned no downloadable model URL.';
-      await supabaseAdmin
+      await getSupabaseAdmin()
         .from('companions')
         .update({
           status: 'failed',
@@ -295,7 +295,7 @@ export async function GET(req: NextRequest) {
     } catch (e) {
       const errMsg =
         e instanceof Error ? e.message : 'Saving the generated model failed.';
-      await supabaseAdmin
+      await getSupabaseAdmin()
         .from('companions')
         .update({
           status: 'failed',
@@ -349,7 +349,7 @@ export async function GET(req: NextRequest) {
     const errMsg =
       mTask.task_error?.message?.trim() ||
       `The 3D provider reported ${mTask.status === 'CANCELED' ? 'cancelled' : 'failure'}.`;
-    await supabaseAdmin
+    await getSupabaseAdmin()
       .from('companions')
       .update({
         status: 'failed',
@@ -376,7 +376,7 @@ export async function GET(req: NextRequest) {
   const glbUrl = mTask.model_urls?.glb;
   if (!glbUrl) {
     const errMsg = 'Meshy succeeded but returned no GLB output.';
-    await supabaseAdmin
+    await getSupabaseAdmin()
       .from('companions')
       .update({
         status: 'failed',
@@ -403,7 +403,7 @@ export async function GET(req: NextRequest) {
   } catch (e) {
     const errMsg =
       e instanceof Error ? e.message : 'Saving the generated model failed.';
-    await supabaseAdmin
+    await getSupabaseAdmin()
       .from('companions')
       .update({
         status: 'failed',
@@ -456,7 +456,7 @@ export async function POST(req: NextRequest) {
 
   /** Retry failed job */
   if (raw.retry === true && typeof raw.companion_id === 'string') {
-    const { data: existing, error: exErr } = await supabaseAdmin
+    const { data: existing, error: exErr } = await getSupabaseAdmin()
       .from('companions')
       .select('id, user_id, status, source_upload_ids')
       .eq('id', raw.companion_id)
@@ -481,7 +481,7 @@ export async function POST(req: NextRequest) {
       );
     }
 
-    const { data: firstRow, error: upErr } = await supabaseAdmin
+    const { data: firstRow, error: upErr } = await getSupabaseAdmin()
       .from('pet_uploads')
       .select('id, storage_path')
       .eq('id', uploadIds[0])
@@ -497,7 +497,7 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ error: 'Could not generate a readable URL for your photo.' }, { status: 500 });
     }
 
-    await supabaseAdmin
+    await getSupabaseAdmin()
       .from('companions')
       .update({
         status: 'pending',
@@ -515,7 +515,7 @@ export async function POST(req: NextRequest) {
     } catch (e) {
       const errMsg =
         e instanceof Error ? e.message : `Starting ${providerStartErrorLabel} generation failed.`;
-      await supabaseAdmin
+      await getSupabaseAdmin()
         .from('companions')
         .update({
           status: 'failed',
@@ -525,7 +525,7 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ error: errMsg, companion_id: raw.companion_id }, { status: 502 });
     }
 
-    await supabaseAdmin.from('companions').update({ api_task_id: taskId }).eq('id', raw.companion_id);
+    await getSupabaseAdmin().from('companions').update({ api_task_id: taskId }).eq('id', raw.companion_id);
 
     return NextResponse.json({
       companion_id: raw.companion_id,
@@ -547,7 +547,7 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ error: 'Each upload_ids entry must be a string.' }, { status: 400 });
   }
 
-  const { data: uploadRows, error: uploadSelErr } = await supabaseAdmin
+  const { data: uploadRows, error: uploadSelErr } = await getSupabaseAdmin()
     .from('pet_uploads')
     .select('id, storage_path')
     .in('id', idStrings)
@@ -571,7 +571,7 @@ export async function POST(req: NextRequest) {
 
   const personality = parseCompanionPersonality(raw.personality);
 
-  const { data: created, error: createErr } = await supabaseAdmin
+  const { data: created, error: createErr } = await getSupabaseAdmin()
     .from('companions')
     .insert({
       user_id: auth.user.id,
@@ -598,7 +598,7 @@ export async function POST(req: NextRequest) {
     taskId = await startProviderTask(signedUrl);
   } catch (e) {
     const errMsg = e instanceof Error ? e.message : `${providerStartErrorLabel} request failed.`;
-    await supabaseAdmin
+    await getSupabaseAdmin()
       .from('companions')
       .update({
         status: 'failed',
@@ -608,7 +608,7 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ error: errMsg, companion_id: companionId }, { status: 502 });
   }
 
-  await supabaseAdmin.from('companions').update({ api_task_id: taskId }).eq('id', companionId);
+  await getSupabaseAdmin().from('companions').update({ api_task_id: taskId }).eq('id', companionId);
 
   return NextResponse.json({
     companion_id: companionId,

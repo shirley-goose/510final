@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { supabaseAdmin } from '@/lib/supabase/server';
+import { getSupabaseAdmin } from '@/lib/supabase/server';
 import { validateFiles } from '@/lib/uploads/validation';
 
 export const runtime = 'nodejs';
@@ -18,7 +18,7 @@ export async function POST(req: NextRequest) {
     }
 
     const token = authHeader.replace('Bearer ', '').trim();
-    const { data: userData, error: userError } = await supabaseAdmin.auth.getUser(token);
+    const { data: userData, error: userError } = await getSupabaseAdmin().auth.getUser(token);
     if (userError || !userData.user) {
       return NextResponse.json({ error: 'Invalid or expired session.' }, { status: 401 });
     }
@@ -45,7 +45,7 @@ export async function POST(req: NextRequest) {
       const filePath = `uploads/${userData.user.id}/${crypto.randomUUID()}-${safeName}`;
       const arrayBuffer = await file.arrayBuffer();
 
-      const { error: uploadError } = await supabaseAdmin.storage
+      const { error: uploadError } = await getSupabaseAdmin().storage
         .from(BUCKET)
         .upload(filePath, arrayBuffer, {
           contentType: file.type,
@@ -65,7 +65,7 @@ export async function POST(req: NextRequest) {
       });
     }
 
-    const { data: inserted, error: insertError } = await supabaseAdmin
+    const { data: inserted, error: insertError } = await getSupabaseAdmin()
       .from('pet_uploads')
       .insert(uploads)
       .select('id, storage_path, original_name');

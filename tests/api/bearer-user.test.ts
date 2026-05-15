@@ -5,11 +5,11 @@ import { authenticateBearer } from '@/lib/api/bearer-user';
 const { getUserMock } = vi.hoisted(() => ({ getUserMock: vi.fn() }));
 
 vi.mock('@/lib/supabase/server', () => ({
-  supabaseAdmin: {
+  getSupabaseAdmin: () => ({
     auth: {
       getUser: getUserMock,
     },
-  },
+  }),
 }));
 
 describe('authenticateBearer', () => {

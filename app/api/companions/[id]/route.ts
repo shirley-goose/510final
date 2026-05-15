@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { authenticateBearer } from '@/lib/api/bearer-user';
 import { companionModelObjectPaths } from '@/lib/companion-storage-paths';
-import { supabaseAdmin } from '@/lib/supabase/server';
+import { getSupabaseAdmin } from '@/lib/supabase/server';
 
 export const runtime = 'nodejs';
 
@@ -46,7 +46,7 @@ export async function PATCH(
       return NextResponse.json({ error: 'Send either name or activate, not both.' }, { status: 400 });
     }
 
-    const { data: row, error: selErr } = await supabaseAdmin
+    const { data: row, error: selErr } = await getSupabaseAdmin()
       .from('companions')
       .select('id,status,model_url')
       .eq('id', companionId)
@@ -67,7 +67,7 @@ export async function PATCH(
         );
       }
 
-      const { error: clearErr } = await supabaseAdmin
+      const { error: clearErr } = await getSupabaseAdmin()
         .from('companions')
         .update({ is_active: false })
         .eq('user_id', auth.user.id);
@@ -76,7 +76,7 @@ export async function PATCH(
         return NextResponse.json({ error: clearErr.message }, { status: 500 });
       }
 
-      const { error: setErr } = await supabaseAdmin
+      const { error: setErr } = await getSupabaseAdmin()
         .from('companions')
         .update({ is_active: true })
         .eq('id', companionId)
@@ -87,7 +87,7 @@ export async function PATCH(
       }
     } else {
       /** Deactivate this companion only; overlay falls back to latest success. */
-      const { error: offErr } = await supabaseAdmin
+      const { error: offErr } = await getSupabaseAdmin()
         .from('companions')
         .update({ is_active: false })
         .eq('id', companionId)
@@ -114,7 +114,7 @@ export async function PATCH(
     );
   }
 
-  const { data: updated, error: upErr } = await supabaseAdmin
+  const { data: updated, error: upErr } = await getSupabaseAdmin()
     .from('companions')
     .update({ name })
     .eq('id', companionId)
@@ -144,7 +144,7 @@ export async function DELETE(
     return NextResponse.json({ error: 'Missing companion id.' }, { status: 400 });
   }
 
-  const { data: row, error: selErr } = await supabaseAdmin
+  const { data: row, error: selErr } = await getSupabaseAdmin()
     .from('companions')
     .select('id,user_id')
     .eq('id', companionId)
@@ -156,11 +156,11 @@ export async function DELETE(
   }
 
   const paths = companionModelObjectPaths(auth.user.id, companionId);
-  const { error: rmErr } = await supabaseAdmin.storage.from(MODEL_BUCKET).remove(paths);
+  const { error: rmErr } = await getSupabaseAdmin().storage.from(MODEL_BUCKET).remove(paths);
   /* Missing objects are acceptable; ignore non-fatal storage errors */
   void rmErr;
 
-  const { error: delErr } = await supabaseAdmin
+  const { error: delErr } = await getSupabaseAdmin()
     .from('companions')
     .delete()
     .eq('id', companionId)

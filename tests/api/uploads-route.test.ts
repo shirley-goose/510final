@@ -2,7 +2,7 @@ import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { NextRequest } from 'next/server';
 import { POST } from '@/app/api/uploads/route';
 
-const { getUserMock, storageUploadMock, insertChain } = vi.hoisted(() => {
+const { getUserMock, storageUploadMock, insertChain, mockAdmin } = vi.hoisted(() => {
   const getUserMock = vi.fn();
   const storageUploadMock = vi.fn();
   const insertChain = vi.fn(() => ({
@@ -19,11 +19,7 @@ const { getUserMock, storageUploadMock, insertChain } = vi.hoisted(() => {
       })
     ),
   }));
-  return { getUserMock, storageUploadMock, insertChain };
-});
-
-vi.mock('@/lib/supabase/server', () => ({
-  supabaseAdmin: {
+  const mockAdmin = {
     auth: {
       getUser: getUserMock,
     },
@@ -38,7 +34,12 @@ vi.mock('@/lib/supabase/server', () => ({
       }
       return {};
     }),
-  },
+  };
+  return { getUserMock, storageUploadMock, insertChain, mockAdmin };
+});
+
+vi.mock('@/lib/supabase/server', () => ({
+  getSupabaseAdmin: () => mockAdmin,
 }));
 
 describe('POST /api/uploads', () => {

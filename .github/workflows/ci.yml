@@ -1,0 +1,40 @@
+# Runs the same checks as `npm run qa` on every push/PR to main.
+# Production deploys: connect this repo in Vercel (production branch = main) so merges
+# trigger Vercel’s build automatically; env vars live only in the Vercel dashboard.
+
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+
+permissions:
+  contents: read
+
+jobs:
+  qa:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+
+    strategy:
+      fail-fast: false
+      matrix:
+        node-version: ["20"]
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Use Node.js ${{ matrix.node-version }}
+        uses: actions/setup-node@v4
+        with:
+          node-version: ${{ matrix.node-version }}
+          cache: npm
+
+      - name: Install
+        run: npm ci
+
+      - name: Test, lint, production build, client bundle scan
+        run: npm run qa

@@ -1,4 +1,15 @@
 # TECHIN 510 Final Project
+
+---
+
+## Pet2Companion (this codebase)
+
+Pet2Companion is the Next.js application in this repository (see `SPEC.md`, `ARCHITECTURE.md`).
+
+### Production URL (handoff)
+
+**Live site:** *[Replace with your Vercel production URL immediately after deploying — see [Deployment](#pet2companion-deployment-and-ci). Verification: open that URL from another device or a private/incognito window; confirm `/login` loads (no localhost-only quirks).]*
+
 ---
 
 ## Overview
@@ -108,5 +119,26 @@ The `SPEC.md` + agreed GIX Bucks fee constitute the project contract. Both parti
 ### Grade Impact
 
 - **Communication & Professionalism** are graded. Ghosting, persistent non-responsiveness may result in point deduction. 
+
+---
+
+## Pet2Companion: deployment and CI
+
+**Stack:** Next.js (frontend + API routes) on **Vercel**, database / auth / file storage on **Supabase**. API keys for Tripo3D or Meshy stay server-side only.
+
+### One-time setup
+
+1. **Supabase:** Create a project. In the SQL editor, run migrations in order: `supabase/migrations/001_create_pet_uploads.sql`, then `supabase/migrations/002_create_companions.sql`.
+2. **Supabase Auth URLs:** In **Authentication → URL configuration**, set **Site URL** to your production origin (for example `https://<project>.vercel.app`). Add **Redirect URLs** that include `https://<project>.vercel.app/reset` (password reset) and any other paths your flow uses.
+3. **Vercel:** [Import the GitHub repository](https://vercel.com/new). Set the **Production Branch** to `main`. Add every variable from [`.env.example`](./.env.example) under **Settings → Environment Variables** (use Production; add Preview if you want PR previews to work end-to-end). Never commit real secrets.
+
+### Automated deployments
+
+- **Vercel:** With the Git integration enabled, every merge into `main` triggers a **production** deployment; pull requests get **Preview** deployments by default.
+- **GitHub Actions:** [`.github/workflows/ci.yml`](./.github/workflows/ci.yml) runs `npm run qa` (tests, lint, production build, client bundle scan) on pushes and PRs targeting `main`.
+
+### Environment variables
+
+Copy names and semantics from `.env.example`. Treat `SUPABASE_SERVICE_ROLE_KEY`, `TRIPO_API_KEY`, and `MESHY_API_KEY` as secrets. Only `NEXT_PUBLIC_*` values belong in browser-visible config.
 
 ---

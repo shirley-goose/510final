@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import type { User } from '@supabase/supabase-js';
-import { supabaseAdmin } from '@/lib/supabase/server';
+import { getSupabaseAdmin } from '@/lib/supabase/server';
 
 export async function authenticateBearer(req: NextRequest): Promise<
   | { ok: true; user: User }
@@ -14,7 +14,7 @@ export async function authenticateBearer(req: NextRequest): Promise<
     };
   }
   const token = authHeader.replace('Bearer ', '').trim();
-  const { data: userData, error: userError } = await supabaseAdmin.auth.getUser(token);
+  const { data: userData, error: userError } = await getSupabaseAdmin().auth.getUser(token);
   if (userError || !userData.user) {
     return {
       ok: false,
