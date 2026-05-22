@@ -13,7 +13,8 @@
     "test": "vitest run",
     "test:watch": "vitest",
     "security:scan-bundles": "node scripts/scan-client-bundles.mjs",
-    "qa": "npm run test && npm run lint && npm run build && npm run security:scan-bundles"
+    "security:scan-source": "node scripts/scan-source-secrets.mjs",
+    "qa": "npm run test && npm run security:scan-source && npm run lint && npm run build && npm run security:scan-bundles"
   },
   "dependencies": {
     "@react-three/drei": "^9.114.6",
