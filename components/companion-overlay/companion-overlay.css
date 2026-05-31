@@ -7,6 +7,7 @@
   opacity: 0.98;
   border-radius: 16px;
   outline: none;
+  position: relative;
   background: radial-gradient(
       ellipse 120% 80% at 50% -20%,
       rgba(255, 226, 180, 0.35),
@@ -73,6 +74,45 @@
   border-radius: 0 0 16px 16px;
   overflow: hidden;
   pointer-events: none;
+}
+
+.companion-overlay-shell.companion-chrome-hidden .companion-overlay-gl {
+  height: calc(var(--overlay-h, 296px) - 10px);
+  border-radius: 0 0 16px 16px;
+}
+
+.companion-overlay-drag-edge {
+  height: 10px;
+  cursor: grab;
+  pointer-events: auto;
+  border-radius: 16px 16px 0 0;
+}
+
+.companion-overlay-shell.companion-chrome-hidden:active .companion-overlay-drag-edge {
+  cursor: grabbing;
+}
+
+.companion-show-chrome-btn {
+  position: absolute;
+  top: 6px;
+  right: 6px;
+  z-index: 2;
+  pointer-events: auto;
+  cursor: pointer;
+  font: inherit;
+  font-size: 10px;
+  font-weight: 700;
+  border: none;
+  border-radius: 6px;
+  padding: 3px 7px;
+  background: rgba(46, 46, 46, 0.72);
+  color: #fff;
+  opacity: 0.35;
+  transition: opacity 0.15s ease;
+}
+
+.companion-overlay-shell.companion-chrome-hidden:hover .companion-show-chrome-btn {
+  opacity: 1;
 }
 
 .companion-overlay-scope {

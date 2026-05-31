@@ -6,6 +6,7 @@ import { useGLTF } from '@react-three/drei';
 import { getSupabaseClient } from '@/lib/supabase/client';
 import {
   LAST_MODEL_LS,
+  OVERLAY_CHROME_HIDDEN_LS,
   OVERLAY_OUTER_HEIGHT,
   OVERLAY_OUTER_WIDTH,
   readDefaultCorner,
@@ -62,6 +63,7 @@ export default function CompanionOverlay({ standalone = false }: CompanionOverla
   const pathname = usePathname();
   const [modelUrl, setModelUrl] = useState<string | null>(null);
   const [personality, setPersonality] = useState<CompanionPersonality>('calm');
+  const [chromeHidden, setChromeHidden] = useState(false);
   const [pos, setPos] = useState<{ left: number; top: number } | null>(() => null);
   const dragging = useRef(false);
   const dragOffset = useRef({ x: 0, y: 0 });
@@ -214,6 +216,32 @@ export default function CompanionOverlay({ standalone = false }: CompanionOverla
       );
     }
   }, [modelUrl]);
+
+  useEffect(() => {
+    try {
+      setChromeHidden(localStorage.getItem(OVERLAY_CHROME_HIDDEN_LS) === '1');
+    } catch {
+      /* private mode */
+    }
+  }, []);
+
+  const hideChrome = () => {
+    setChromeHidden(true);
+    try {
+      localStorage.setItem(OVERLAY_CHROME_HIDDEN_LS, '1');
+    } catch {
+      /* quota */
+    }
+  };
+
+  const showChrome = () => {
+    setChromeHidden(false);
+    try {
+      localStorage.removeItem(OVERLAY_CHROME_HIDDEN_LS);
+    } catch {
+      /* quota */
+    }
+  };
 
   useEffect(() => {
     function onResize() {
@@ -420,7 +448,7 @@ export default function CompanionOverlay({ standalone = false }: CompanionOverla
 
   return (
     <div
-      className="companion-overlay-shell companion-overlay-scope"
+      className={`companion-overlay-shell companion-overlay-scope${chromeHidden ? ' companion-chrome-hidden' : ''}`}
       style={{
         position: 'fixed',
         left: `${pos.left}px`,
@@ -430,38 +458,77 @@ export default function CompanionOverlay({ standalone = false }: CompanionOverla
         zIndex: 2147482647,
       }}
     >
-      <div
-        className="companion-overlay-chrome companion-drag-target"
-        title="Drag to move"
-        onPointerDown={onDragStart}
-        onPointerMove={onDragMove}
-        onPointerUp={onDragEnd}
-        onPointerCancel={onDragEnd}
-      >
-        <span className="companion-drag-hint">Pet companion · drag bar</span>
-        <button
-          type="button"
-          className="companion-mini-btn companion-no-drag"
-          onClick={(evt) => {
-            evt.preventDefault();
-            evt.stopPropagation();
-            openDetachedViewerWindow();
-          }}
+      {!chromeHidden ? (
+        <div
+          className="companion-overlay-chrome companion-drag-target"
+          title="Drag to move"
+          onPointerDown={onDragStart}
+          onPointerMove={onDragMove}
+          onPointerUp={onDragEnd}
+          onPointerCancel={onDragEnd}
         >
-          Pop-out
-        </button>
-        <button
-          type="button"
-          className="companion-mini-btn companion-no-drag"
-          onClick={(evt) => {
-            evt.preventDefault();
-            evt.stopPropagation();
-            resetPositionForCornerDefault();
-          }}
-        >
-          Dock
-        </button>
-      </div>
+          <span className="companion-drag-hint">Pet companion · drag bar</span>
+          <button
+            type="button"
+            className="companion-mini-btn companion-no-drag"
+            title="Hide drag bar"
+            aria-label="Hide drag bar"
+            onClick={(evt) => {
+              evt.preventDefault();
+              evt.stopPropagation();
+              hideChrome();
+            }}
+          >
+            Hide
+          </button>
+          <button
+            type="button"
+            className="companion-mini-btn companion-no-drag"
+            onClick={(evt) => {
+              evt.preventDefault();
+              evt.stopPropagation();
+              openDetachedViewerWindow();
+            }}
+          >
+            Pop-out
+          </button>
+          <button
+            type="button"
+            className="companion-mini-btn companion-no-drag"
+            onClick={(evt) => {
+              evt.preventDefault();
+              evt.stopPropagation();
+              resetPositionForCornerDefault();
+            }}
+          >
+            Dock
+          </button>
+        </div>
+      ) : (
+        <>
+          <div
+            className="companion-overlay-drag-edge companion-drag-target"
+            title="Drag to move"
+            onPointerDown={onDragStart}
+            onPointerMove={onDragMove}
+            onPointerUp={onDragEnd}
+            onPointerCancel={onDragEnd}
+          />
+          <button
+            type="button"
+            className="companion-show-chrome-btn companion-no-drag"
+            title="Show drag bar"
+            aria-label="Show drag bar"
+            onClick={(evt) => {
+              evt.preventDefault();
+              evt.stopPropagation();
+              showChrome();
+            }}
+          >
+            Bar
+          </button>
+        </>
+      )}
       <div className="companion-overlay-gl">
         <CompanionViewerCanvas
           url={modelUrl}
@@ -471,10 +538,12 @@ export default function CompanionOverlay({ standalone = false }: CompanionOverla
           animParamsRef={animParamsRef}
         />
       </div>
-      <small className="companion-desktop-note companion-no-drag">
-        Clicks pass through the 3D area. Tabs cannot float above unrelated desktop apps — use Pop-out for a small
-        window you can tuck on screen.
-      </small>
+      {!chromeHidden && (
+        <small className="companion-desktop-note companion-no-drag">
+          Clicks pass through the 3D area. Tabs cannot float above unrelated desktop apps — use Pop-out for a small
+          window you can tuck on screen.
+        </small>
+      )}
     </div>
   );
 }

@@ -5,6 +5,7 @@ export const OVERLAY_OUTER_WIDTH = 280;
 export const OVERLAY_OUTER_HEIGHT = 296;
 
 export const OVERLAY_LS_POSITION = 'pet2companion:overlay-position';
+export const OVERLAY_CHROME_HIDDEN_LS = 'pet2companion:hide-chrome';
 export const LAST_MODEL_LS = 'pet2companion:last-model-url';
 
 /** Browser tabs cannot lift above other desktop apps — use a detached popup for a smaller always-on-browser-stack window (see overlay UI). */
