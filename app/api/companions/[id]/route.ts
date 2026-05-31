@@ -86,7 +86,7 @@ export async function PATCH(
         return NextResponse.json({ error: setErr.message }, { status: 500 });
       }
     } else {
-      /** Deactivate this companion only; overlay falls back to latest success. */
+      /** Deactivate this companion; overlay hides when nothing is active. */
       const { error: offErr } = await getSupabaseAdmin()
         .from('companions')
         .update({ is_active: false })

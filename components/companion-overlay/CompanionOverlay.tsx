@@ -137,21 +137,6 @@ export default function CompanionOverlay({ standalone = false }: CompanionOverla
         return;
       }
 
-      const { data: fallbackRow } = await supabase
-        .from('companions')
-        .select('model_url,personality')
-        .eq('user_id', session.user.id)
-        .eq('status', 'success')
-        .not('model_url', 'is', null)
-        .order('created_at', { ascending: false })
-        .limit(1)
-        .maybeSingle();
-
-      if (fallbackRow?.model_url && typeof fallbackRow.model_url === 'string') {
-        applyRow(fallbackRow);
-        return;
-      }
-
       try {
         localStorage.removeItem(LAST_MODEL_LS);
       } catch {
