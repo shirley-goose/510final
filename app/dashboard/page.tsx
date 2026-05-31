@@ -1,6 +1,7 @@
 'use client';
 
 import { FormEvent, useCallback, useEffect, useState } from 'react';
+import type { SupabaseClient } from '@supabase/supabase-js';
 import { getSupabaseClient } from '@/lib/supabase/client';
 
 type CompanionRow = {
@@ -12,7 +13,66 @@ type CompanionRow = {
   is_active: boolean;
   created_at: string;
   personality: string;
+  source_upload_ids: string[] | null;
 };
+
+const PET_UPLOADS_BUCKET = 'pet-uploads';
+
+function CompanionThumbnail({
+  row,
+  supabase,
+}: {
+  row: Pick<CompanionRow, 'id' | 'thumbnail_url' | 'source_upload_ids'>;
+  supabase: SupabaseClient | null;
+}) {
+  const [src, setSrc] = useState<string | null>(row.thumbnail_url);
+
+  useEffect(() => {
+    if (row.thumbnail_url) {
+      setSrc(row.thumbnail_url);
+      return undefined;
+    }
+    if (!supabase) return undefined;
+
+    let cancelled = false;
+    const uploadId = row.source_upload_ids?.[0];
+    if (!uploadId) return undefined;
+
+    const load = async () => {
+      const { data: up } = await supabase
+        .from('pet_uploads')
+        .select('storage_path')
+        .eq('id', uploadId)
+        .maybeSingle();
+
+      if (cancelled || !up?.storage_path) return;
+
+      const { data } = await supabase.storage
+        .from(PET_UPLOADS_BUCKET)
+        .createSignedUrl(up.storage_path as string, 3600);
+
+      if (!cancelled && data?.signedUrl) setSrc(data.signedUrl);
+    };
+
+    void load();
+    return () => {
+      cancelled = true;
+    };
+  }, [row.id, row.thumbnail_url, row.source_upload_ids, supabase]);
+
+  if (src) {
+    return (
+      /* eslint-disable-next-line @next/next/no-img-element -- Supabase public/signed URLs vary by project */
+      <img src={src} alt="" style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
+    );
+  }
+
+  return (
+    <span style={{ fontSize: 42, opacity: 0.25 }} aria-hidden>
+      🐾
+    </span>
+  );
+}
 
 function notifyOverlayRefresh() {
   if (typeof window === 'undefined') return;
@@ -65,7 +125,7 @@ export default function DashboardPage() {
 
     const { data, error } = await supabase
       .from('companions')
-      .select('id,name,thumbnail_url,model_url,status,is_active,created_at,personality')
+      .select('id,name,thumbnail_url,model_url,status,is_active,created_at,personality,source_upload_ids')
       .order('created_at', { ascending: false });
 
     if (error) {
@@ -294,15 +354,8 @@ export default function DashboardPage() {
                       justifyContent: 'center',
                     }}
                   >
-                    {row.thumbnail_url ? (
-                      <>
-                        {/* eslint-disable-next-line @next/next/no-img-element -- public Supabase URLs vary by project host */}
-                        <img
-                          src={row.thumbnail_url}
-                          alt=""
-                          style={{ width: '100%', height: '100%', objectFit: 'cover' }}
-                        />
-                      </>
+                    {row.thumbnail_url || row.source_upload_ids?.length ? (
+                      <CompanionThumbnail row={row} supabase={supabase} />
                     ) : (
                       <span style={{ fontSize: 42, opacity: 0.25 }} aria-hidden>
                         🐾

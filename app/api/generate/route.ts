@@ -88,6 +88,54 @@ async function signPetImagePath(storagePath: string): Promise<string | null> {
   return data.signedUrl;
 }
 
+async function uploadCompanionPreviewImage(
+  userId: string,
+  companionId: string,
+  buf: Buffer,
+  contentType: string
+): Promise<string | null> {
+  const thumbPath = `models/${userId}/${companionId}/preview.png`;
+  const { error: tErr } = await getSupabaseAdmin().storage.from(MODEL_BUCKET).upload(thumbPath, buf, {
+    contentType,
+    upsert: true,
+  });
+  if (tErr) return null;
+  const {
+    data: { publicUrl },
+  } = getSupabaseAdmin().storage.from(MODEL_BUCKET).getPublicUrl(thumbPath);
+  return publicUrl;
+}
+
+/** 3D AI Studio Tripo often returns GLB only — use the user's uploaded pet photo as preview. */
+async function loadSourceUploadPreview(
+  companion: CompanionRow
+): Promise<{ buf: Buffer; contentType: string } | null> {
+  const uploadIds = companion.source_upload_ids;
+  if (!uploadIds?.length) return null;
+
+  const { data: uploadRow, error } = await getSupabaseAdmin()
+    .from('pet_uploads')
+    .select('storage_path, mime_type')
+    .eq('id', uploadIds[0])
+    .eq('user_id', companion.user_id)
+    .maybeSingle();
+
+  if (error || !uploadRow?.storage_path) return null;
+
+  const { data, error: dlErr } = await getSupabaseAdmin().storage
+    .from(PET_BUCKET)
+    .download(uploadRow.storage_path as string);
+
+  if (dlErr || !data) return null;
+
+  const mime =
+    typeof uploadRow.mime_type === 'string' && uploadRow.mime_type.startsWith('image/')
+      ? uploadRow.mime_type
+      : 'image/jpeg';
+
+  return { buf: Buffer.from(await data.arrayBuffer()), contentType: mime };
+}
+
 async function persistGeneratedOutputs(
   companion: CompanionRow,
   glbUrl: string,
@@ -115,17 +163,27 @@ async function persistGeneratedOutputs(
     const imgRes = await fetch(thumbnailUrl);
     if (imgRes.ok) {
       const buf = Buffer.from(await imgRes.arrayBuffer());
-      const thumbPath = `models/${companion.user_id}/${companion.id}/preview.png`;
-      const { error: tErr } = await getSupabaseAdmin().storage.from(MODEL_BUCKET).upload(thumbPath, buf, {
-        contentType: 'image/png',
-        upsert: true,
-      });
-      if (!tErr) {
-        const {
-          data: { publicUrl },
-        } = getSupabaseAdmin().storage.from(MODEL_BUCKET).getPublicUrl(thumbPath);
-        thumbnailPublic = publicUrl;
-      }
+      const contentType = imgRes.headers.get('content-type')?.startsWith('image/')
+        ? imgRes.headers.get('content-type')!
+        : 'image/png';
+      thumbnailPublic = await uploadCompanionPreviewImage(
+        companion.user_id,
+        companion.id,
+        buf,
+        contentType
+      );
+    }
+  }
+
+  if (!thumbnailPublic) {
+    const sourcePreview = await loadSourceUploadPreview(companion);
+    if (sourcePreview) {
+      thumbnailPublic = await uploadCompanionPreviewImage(
+        companion.user_id,
+        companion.id,
+        sourcePreview.buf,
+        sourcePreview.contentType
+      );
     }
   }
 
