@@ -19,11 +19,11 @@ Policies are defined in SQL migrations:
 ## Client bundles (secrets)
 
 - `NEXT_PUBLIC_*` vars are **expected** in browser bundles (Supabase URL + anon key for auth).
-- **Forbidden** in client chunks: `SUPABASE_SERVICE_ROLE_KEY`, `MESHY_API_KEY`, `TRIPO_API_KEY`, and similar server env reads.
+- **Forbidden** in client chunks: `SUPABASE_SERVICE_ROLE_KEY`, `MESHY_API_KEY`, `THREED_AI_STUDIO_API_KEY`, and similar server env reads.
 
 **Automated checks (no trufflehog):**
 
-- **Source:** `npm run security:scan-source` — rejects obvious hardcoded `MESHY_API_KEY` / `TRIPO_API_KEY` / `SUPABASE_SERVICE_ROLE_KEY` assignments in `app/`, `lib/`, `components/`.
+- **Source:** `npm run security:scan-source` — rejects obvious hardcoded `MESHY_API_KEY` / `THREED_AI_STUDIO_API_KEY` / `SUPABASE_SERVICE_ROLE_KEY` assignments in `app/`, `lib/`, `components/`.
 - **Built client chunks:** After `npm run build`, run `npm run security:scan-bundles`. It scans `.next/static/chunks/**/*.js` for forbidden patterns. A clean run prints `OK`.
 
 **Static checks (Vitest):** `tests/integration/pipeline.integration.test.ts` and `tests/security/env-and-secrets.test.ts` assert `lib/supabase/client.ts` and `use client` modules do not reference server-only secret names.
@@ -37,7 +37,7 @@ Policies are defined in SQL migrations:
 | `tests/security/env-and-secrets.test.ts` | **Security:** `.env.example` shape, `.gitignore` for env files, browser client must not name server secrets, `use client` modules must not mention those identifiers. |
 | `tests/integration/pipeline.integration.test.ts` | Offline smoke + client source sanity. |
 
-**Full upload → Tripo → `.glb` display** is **not** fully automated (requires real provider keys and Supabase). Run manual QA: upload → generate → dashboard/overlay.
+**Full upload → 3D AI Studio → `.glb` display** is **not** fully automated (requires real provider keys and Supabase). Run manual QA: upload → generate → dashboard/overlay.
 
 ## Commands (CI / local)
 

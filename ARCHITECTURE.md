@@ -2,7 +2,7 @@
 
 ## 1. System Architecture Overview
 
-Pet2Companion operates on a modern Serverless/BaaS architecture. The application is a unified Next.js web application deployed on Vercel. It acts as the orchestration layer between the user interface (React/React Three Fiber), the backend state/storage (Supabase), and the generative AI service (Meshy/Tripo3D API).
+Pet2Companion operates on a modern Serverless/BaaS architecture. The application is a unified Next.js web application deployed on Vercel. It acts as the orchestration layer between the user interface (React/React Three Fiber), the backend state/storage (Supabase), and the generative AI service (3D AI Studio / Meshy API).
 
 ### Core Data Flow: Image to 3D Companion
 
@@ -23,7 +23,7 @@ Pet2Companion operates on a modern Serverless/BaaS architecture. The application
 | **Next.js 14 (App Router)** | Full-stack Framework    | Enables seamless sharing of types between frontend UI and backend API routes. Server Actions and API routes allow us to securely interact with the 3D generation APIs without exposing keys to the client.          |
 | **Supabase**                | Database, Auth, Storage | Provides an all-in-one backend. PostgreSQL handles relational data (users -> companions), Storage holds the potentially large `.glb` files and thumbnails, and Auth provides out-of-the-box secure login.           |
 | **React Three Fiber (R3F)** | 3D Rendering            | Writing vanilla Three.js in React can lead to complex and messy component lifecycles. R3F provides a declarative, component-based approach to 3D, making it vastly easier to manage animations, models, and states. |
-| **Meshy / Tripo3D API**     | AI 3D Generation        | State-of-the-art Image-to-3D APIs. Outsourcing this prevents the need to build and host heavy, expensive GPU clusters.                                                                                              |
+| **3D AI Studio / Meshy API**     | AI 3D Generation        | State-of-the-art Image-to-3D APIs. Outsourcing this prevents the need to build and host heavy, expensive GPU clusters.                                                                                              |
 | **Zustand**                 | State Management        | (Recommended addition) A lightweight, unopinionated state manager to handle the "active companion" state and mouse cursor coordinates across the Next.js app and the R3F canvas.                                    |
 | **Vercel**                  | Hosting/Deployment      | Native, zero-config deployment for Next.js with automatic CI/CD from GitHub.                                                                                                                                        |
 
@@ -54,7 +54,7 @@ Stores the metadata and references to the 3D assets for each generated pet.
 | `thumbnail_url` | text        | Nullable                                  | Public URL to the preview image in Supabase Storage.      |
 | `is_active`     | boolean     | Default `false`                           | Indicates if this is the currently displayed desktop pet. |
 | `status`        | enum        | `pending`, `success`, `failed`            | Tracks the state of the 3D API generation.                |
-| `api_task_id`   | text        | Nullable                                  | The ID returned by Meshy/Tripo3D to poll for progress.    |
+| `api_task_id`   | text        | Nullable                                  | The ID returned by 3D AI Studio/Meshy to poll for progress.    |
 | `created_at`    | timestamptz | Default `now()`                           | Timestamp of creation.                                    |
 
 

@@ -124,7 +124,7 @@ The `SPEC.md` + agreed GIX Bucks fee constitute the project contract. Both parti
 
 ## Pet2Companion: deployment and CI
 
-**Stack:** Next.js (frontend + API routes) on **Vercel**, database / auth / file storage on **Supabase**. API keys for Tripo3D or Meshy stay server-side only.
+**Stack:** Next.js (frontend + API routes) on **Vercel**, database / auth / file storage on **Supabase**. API keys for 3D AI Studio or Meshy stay server-side only.
 
 ### One-time setup
 
@@ -139,6 +139,6 @@ The `SPEC.md` + agreed GIX Bucks fee constitute the project contract. Both parti
 
 ### Environment variables
 
-Copy names and semantics from `.env.example`. Treat `SUPABASE_SERVICE_ROLE_KEY`, `TRIPO_API_KEY`, and `MESHY_API_KEY` as secrets. Only `NEXT_PUBLIC_*` values belong in browser-visible config.
+Copy names and semantics from `.env.example`. Treat `SUPABASE_SERVICE_ROLE_KEY`, `THREED_AI_STUDIO_API_KEY`, and `MESHY_API_KEY` as secrets. Only `NEXT_PUBLIC_*` values belong in browser-visible config.
 
 ---

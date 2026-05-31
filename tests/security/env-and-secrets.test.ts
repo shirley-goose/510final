@@ -14,7 +14,7 @@ describe('security: .env.example and secret hygiene', () => {
     expect(raw).toContain('NEXT_PUBLIC_SUPABASE_URL=');
     expect(raw).toContain('NEXT_PUBLIC_SUPABASE_ANON_KEY=');
     expect(raw).toContain('SUPABASE_SERVICE_ROLE_KEY=');
-    expect(raw).toMatch(/TRIPO_API_KEY=|MESHY_API_KEY=/);
+    expect(raw).toMatch(/THREED_AI_STUDIO_API_KEY=|MESHY_API_KEY=/);
     // No filled-in secrets in the template (long non-empty value on same line as KEY=)
     const bad = raw
       .split('\n')
@@ -39,7 +39,7 @@ describe('security: .env.example and secret hygiene', () => {
     const src = readFileSync(p, 'utf8');
     expect(src).not.toMatch(/SUPABASE_SERVICE_ROLE/);
     expect(src).not.toMatch(/MESHY_API_KEY/);
-    expect(src).not.toMatch(/TRIPO_API_KEY/);
+    expect(src).not.toMatch(/THREED_AI_STUDIO_API_KEY/);
   });
 });
 
@@ -78,7 +78,7 @@ describe('security: client bundle boundary (source-level)', () => {
       existsSync(d)
     );
 
-    const forbidden = [/SUPABASE_SERVICE_ROLE/i, /MESHY_API_KEY/, /TRIPO_API_KEY/, /process\.env\.SUPABASE_SERVICE/i];
+    const forbidden = [/SUPABASE_SERVICE_ROLE/i, /MESHY_API_KEY/, /THREED_AI_STUDIO_API_KEY/, /process\.env\.SUPABASE_SERVICE/i];
 
     for (const root of roots) {
       for (const file of walkClientFiles(root)) {

@@ -76,7 +76,7 @@ Pet owners (age 18–40) who work or study at a computer and feel emotionally co
 
 ### 1. Photo Upload & 3D Generation
 - Accept 1–5 images (JPEG/PNG, max 10MB each)
-- Send to Meshy or Tripo3D API; poll for completion with progress indicator
+- Send to 3D AI Studio or Meshy API; poll for completion with progress indicator
 - Store `.glb` model in Supabase Storage
 - Show in-browser preview before activating
 
@@ -124,7 +124,7 @@ Pet owners (age 18–40) who work or study at a computer and feel emotionally co
 | File Storage | Supabase Storage             |
 | Auth         | Supabase Auth                |
 | 3D Rendering | Three.js + React Three Fiber |
-| AI / 3D Gen  | Meshy API or Tripo3D API     |
+| AI / 3D Gen  | 3D AI Studio API or Meshy API     |
 | Deployment   | Vercel                       |
 
 ---

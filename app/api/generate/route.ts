@@ -5,10 +5,12 @@ import {
   fetchMeshyImageTo3dTask,
 } from '@/lib/generation/providers/meshy';
 import {
-  createTripoImageToModelTask,
-  fetchTripoTask,
-  tripoPrimaryModelUrl,
-} from '@/lib/generation/providers/tripo';
+  createThreeDAiStudioImageTo3dTask,
+  fetchThreeDAiStudioTask,
+  threeDAiStudioPrimaryModelUrl,
+  threeDAiStudioTerminalFailed,
+  threeDAiStudioThumbnailUrl,
+} from '@/lib/generation/providers/three-d-ai-studio';
 import { GENERATION_SERVER_DEADLINE_MS, getActiveAiProvider } from '@/lib/generation/config';
 import { parseCompanionPersonality } from '@/lib/companion-overlay/personalities';
 
@@ -33,15 +35,15 @@ function requireMeshyKey(): string {
   return k;
 }
 
-function tripoApiKeyOrNull(): string | null {
-  const k = process.env.TRIPO_API_KEY?.trim();
+function threeDAiStudioApiKeyOrNull(): string | null {
+  const k = process.env.THREED_AI_STUDIO_API_KEY?.trim();
   return k?.length ? k : null;
 }
 
-function requireTripoKey(): string {
-  const k = tripoApiKeyOrNull();
+function requireThreeDAiStudioKey(): string {
+  const k = threeDAiStudioApiKeyOrNull();
   if (!k) {
-    throw new Error('TRIPO_API_KEY is not configured on the server.');
+    throw new Error('THREED_AI_STUDIO_API_KEY is not configured on the server.');
   }
   return k;
 }
@@ -140,10 +142,6 @@ async function persistGeneratedOutputs(
   return { model_url: modelPublicUrl, thumbnail_url: thumbnailPublic };
 }
 
-function tripoTerminalFailed(status: string): boolean {
-  return ['failed', 'cancelled', 'banned', 'expired'].includes(status);
-}
-
 export async function GET(req: NextRequest) {
   const auth = await getAuthedUser(req);
   if ('error' in auth) return auth.error;
@@ -206,10 +204,13 @@ export async function GET(req: NextRequest) {
     }
   }
 
-  if (provider === 'tripo') {
-    const apiKey = tripoApiKeyOrNull();
+  if (provider === '3daistudio') {
+    const apiKey = threeDAiStudioApiKeyOrNull();
     if (!apiKey) {
-      return NextResponse.json({ error: '3D generation is not configured (TRIPO_API_KEY).' }, { status: 503 });
+      return NextResponse.json(
+        { error: '3D generation is not configured (THREED_AI_STUDIO_API_KEY).' },
+        { status: 503 }
+      );
     }
 
     if (!row.api_task_id) {
@@ -218,15 +219,15 @@ export async function GET(req: NextRequest) {
         progress: 0,
         companion_id: row.id,
         phase: 'queued',
-        message: 'Waiting for Tripo task to start…',
+        message: 'Waiting for 3D AI Studio task to start…',
       });
     }
 
     let task;
     try {
-      task = await fetchTripoTask(apiKey, row.api_task_id);
+      task = await fetchThreeDAiStudioTask(apiKey, row.api_task_id);
     } catch (e) {
-      const hint = e instanceof Error ? e.message : 'Unable to reach Tripo.';
+      const hint = e instanceof Error ? e.message : 'Unable to reach 3D AI Studio.';
       return NextResponse.json({
         status: 'generating',
         progress: null,
@@ -240,10 +241,10 @@ export async function GET(req: NextRequest) {
     const st = String(task.status);
     const progress = typeof task.progress === 'number' ? task.progress : 0;
 
-    if (tripoTerminalFailed(st)) {
+    if (threeDAiStudioTerminalFailed(st, task.failure_reason)) {
       const errMsg =
-        task.error_msg?.trim() ||
-        `The 3D provider reported ${st === 'cancelled' ? 'cancelled' : 'failure'}.`;
+        task.failure_reason?.trim() ||
+        `The 3D provider reported ${st.toUpperCase() === 'CANCELLED' || st.toUpperCase() === 'CANCELED' ? 'cancelled' : 'failure'}.`;
       await getSupabaseAdmin()
         .from('companions')
         .update({
@@ -258,19 +259,19 @@ export async function GET(req: NextRequest) {
       });
     }
 
-    if (st !== 'success') {
+    if (st.toUpperCase() !== 'FINISHED') {
       return NextResponse.json({
         status: 'generating',
         progress,
         companion_id: row.id,
-        phase: 'tripo_running',
+        phase: '3daistudio_running',
         message: 'Generating your companion model…',
       });
     }
 
-    const glbUrl = tripoPrimaryModelUrl(task);
+    const glbUrl = threeDAiStudioPrimaryModelUrl(task);
     if (!glbUrl) {
-      const errMsg = 'Tripo finished but returned no downloadable model URL.';
+      const errMsg = '3D AI Studio finished but returned no downloadable model URL.';
       await getSupabaseAdmin()
         .from('companions')
         .update({
@@ -281,7 +282,7 @@ export async function GET(req: NextRequest) {
       return NextResponse.json({ status: 'failed', companion_id: row.id, error: errMsg });
     }
 
-    const thumb = task.output?.rendered_image;
+    const thumb = threeDAiStudioThumbnailUrl(task);
     try {
       const { model_url, thumbnail_url } = await persistGeneratedOutputs(row, glbUrl, thumb);
       return NextResponse.json({
@@ -312,7 +313,7 @@ export async function GET(req: NextRequest) {
     return NextResponse.json(
       {
         error:
-          'Meshy fallback is not configured. Set AI_3D_PROVIDER=tripo and TRIPO_API_KEY, or supply MESHY_API_KEY for meshy.',
+          'Meshy fallback is not configured. Set AI_3D_PROVIDER=3daistudio and THREED_AI_STUDIO_API_KEY, or supply MESHY_API_KEY for meshy.',
       },
       { status: 503 }
     );
@@ -430,19 +431,19 @@ export async function POST(req: NextRequest) {
   const raw = body as Record<string, unknown>;
 
   const startProviderTask = async (signedImageUrl: string): Promise<string> => {
-    if (provider === 'tripo') {
-      const key = requireTripoKey();
-      return createTripoImageToModelTask(key, signedImageUrl);
+    if (provider === '3daistudio') {
+      const key = requireThreeDAiStudioKey();
+      return createThreeDAiStudioImageTo3dTask(key, signedImageUrl);
     }
     const key = requireMeshyKey();
     return createMeshyImageTo3dTask(key, signedImageUrl);
   };
 
-  const providerStartErrorLabel = provider === 'tripo' ? 'Tripo' : 'Meshy';
+  const providerStartErrorLabel = provider === '3daistudio' ? '3D AI Studio' : 'Meshy';
 
-  if (provider === 'tripo' && !tripoApiKeyOrNull()) {
+  if (provider === '3daistudio' && !threeDAiStudioApiKeyOrNull()) {
     return NextResponse.json(
-      { error: 'TRIPO_API_KEY is required when AI_3D_PROVIDER is tripo (default).' },
+      { error: 'THREED_AI_STUDIO_API_KEY is required when AI_3D_PROVIDER is 3daistudio (default).' },
       { status: 503 }
     );
   }

@@ -303,7 +303,7 @@ export default function UploadPage() {
       setGenProgress(0);
       setPollingCompanionId(data.companion_id);
       setGenerationJobId(data.companion_id);
-      setGenMessage('Submitted to Tripo. This usually completes within two minutes.');
+      setGenMessage('Submitted to 3D AI Studio. This usually completes within two minutes.');
     } catch {
       setGenError('Network error while starting generation.');
     }
@@ -458,9 +458,9 @@ export default function UploadPage() {
               <span className="badge">Step 2</span>
               <h2 style={{ margin: '12px 0 6px', fontSize: 22 }}>Generate a 3D model</h2>
               <p style={{ margin: 0, fontSize: 15 }}>
-                The backend sends your first uploaded photo to <strong>Tripo3D</strong> as a temporary signed URL,
-                polls Tripo until the `.glb` is ready, then saves it under the path prefix `models/` for your account
-                in Supabase Storage. Your Tripo API key (<code>tsk_…</code>) stays on the server only.
+                The backend sends your first uploaded photo to <strong>3D AI Studio</strong> as a temporary signed URL,
+                polls until the `.glb` is ready, then saves it under the path prefix `models/` for your account
+                in Supabase Storage. Your 3D AI Studio API key stays on the server only.
               </p>
             </div>
             <div style={{ display: 'grid', gap: 8 }}>
@@ -544,7 +544,7 @@ export default function UploadPage() {
                 )}
                 {showSlowNotice && (
                   <p style={{ margin: 0 }} className="error">
-                    This is slower than usual. Tripo jobs can still succeed—keep this tab open—or retry if it
+                    This is slower than usual. 3D AI Studio jobs can still succeed—keep this tab open—or retry if it
                     eventually fails or times out.
                   </p>
                 )}

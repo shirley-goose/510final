@@ -14,8 +14,8 @@ const CHUNKS_DIR = join(process.cwd(), '.next', 'static', 'chunks');
 const FORBIDDEN = [
   { re: /SUPABASE_SERVICE_ROLE_KEY/gi, name: 'SUPABASE_SERVICE_ROLE_KEY' },
   { re: /MESHY_API_KEY/gi, name: 'MESHY_API_KEY' },
-  { re: /TRIPO_API_KEY/gi, name: 'TRIPO_API_KEY' },
-  { re: /process\.env\.(SUPABASE_SERVICE|MESHY_API|TRIPO_API)/gi, name: 'process.env server key' },
+  { re: /THREED_AI_STUDIO_API_KEY/gi, name: 'THREED_AI_STUDIO_API_KEY' },
+  { re: /process\.env\.(SUPABASE_SERVICE|MESHY_API|THREED_AI_STUDIO_API)/gi, name: 'process.env server key' },
 ];
 
 function collectJsFiles(dir, acc = []) {
