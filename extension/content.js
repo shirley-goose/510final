@@ -52,14 +52,33 @@ chrome.storage.local.get([STORAGE_KEY], (result) => {
   }
 });
 
+// Guard against double-injection (executeScript can run the file twice)
+if (window.__pet2companion_loaded) {
+  // Already running — just re-register message listener and exit
+  chrome.runtime.onMessage.addListener((msg, _sender, sendResponse) => {
+    if (msg.type === 'GET_STATUS')  sendResponse({ visible });
+    if (msg.type === 'TOGGLE_PET') { visible ? hidePet() : showPet(); sendResponse({ visible }); }
+    return true;
+  });
+} else {
+  window.__pet2companion_loaded = true;
+}
+
 // ── Extension popup messages ────────────────────────────────────────────────
 chrome.runtime.onMessage.addListener((msg, _sender, sendResponse) => {
   if (msg.type === 'TOGGLE_PET') {
-    visible ? hidePet() : showPet();
-    sendResponse({ visible });
+    if (visible) {
+      hidePet();
+    } else {
+      showPet();
+    }
+    // showPet is async; reply after a short wait so visible is updated
+    setTimeout(() => sendResponse({ visible }), 200);
+    return true;
   }
   if (msg.type === 'GET_STATUS') {
     sendResponse({ visible });
+    return true;
   }
   return true;
 });
