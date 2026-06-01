@@ -6,6 +6,7 @@ import { Center, useGLTF } from '@react-three/drei';
 import * as THREE from 'three';
 import type { BehaviorAnimParams, BehaviorMode } from '@/lib/companion-overlay/behavior';
 import type { CompanionPersonality } from '@/lib/companion-overlay/personalities';
+import { readCompanionModelYRotationRad } from '@/lib/companion-overlay/constants';
 
 type CompanionViewerCanvasProps = {
   url: string;
@@ -35,6 +36,7 @@ function AnimatedModelInner({
 }: CompanionViewerCanvasProps) {
   const gltf = useGLTF(url);
   const sceneClone = useMemo(() => gltf.scene.clone(true), [gltf.scene]);
+  const modelBaseY = useMemo(() => readCompanionModelYRotationRad(), []);
   const group = useRef<THREE.Group>(null);
 
   const smoothRot = useRef({ x: 0, y: 0, z: 0 });
@@ -114,9 +116,11 @@ function AnimatedModelInner({
 
   return (
     <group ref={group}>
-      <Center>
-        <primitive object={sceneClone} />
-      </Center>
+      <group rotation={[0, modelBaseY, 0]}>
+        <Center>
+          <primitive object={sceneClone} />
+        </Center>
+      </group>
     </group>
   );
 }

@@ -20,3 +20,12 @@ export function readDefaultCorner(): CompanionCorner {
   }
   return 'br';
 }
+
+/** Y-axis rotation (radians) so image-to-3D GLBs face the camera. Tripo exports side-on by default. */
+export function readCompanionModelYRotationRad(): number {
+  const raw = process.env.NEXT_PUBLIC_COMPANION_MODEL_Y_ROTATION?.trim();
+  if (!raw) return -Math.PI / 2;
+  const deg = Number(raw);
+  if (!Number.isFinite(deg)) return -Math.PI / 2;
+  return (deg * Math.PI) / 180;
+}
