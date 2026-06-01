@@ -31,6 +31,13 @@ import './companion-overlay.css';
 
 type CompanionOverlayProps = {
   standalone?: boolean;
+  /**
+   * When true the overlay is running inside a Chrome-extension iframe.
+   * Mouse events arrive via postMessage instead of direct DOM listeners,
+   * and the overlay broadcasts PET_BOUNDS + DRAG_START / DRAG_END back
+   * to the parent so the content script can manage pointer-events.
+   */
+  iframeMode?: boolean;
 };
 
 type AutonomousState = {
@@ -70,7 +77,7 @@ function pickRandomWalkTarget(vw: number, vh: number): { left: number; top: numb
   };
 }
 
-export default function CompanionOverlay({ standalone = false }: CompanionOverlayProps) {
+export default function CompanionOverlay({ standalone = false, iframeMode = false }: CompanionOverlayProps) {
   const pathname = usePathname();
   const [modelUrl, setModelUrl] = useState<string | null>(null);
   const [personality, setPersonality] = useState<CompanionPersonality>('calm');
@@ -99,6 +106,17 @@ export default function CompanionOverlay({ standalone = false }: CompanionOverla
   /** True while pet is being dragged — canvas shows excited anim. */
   const isDraggingRef = useRef(false);
 
+  /** Broadcast current pet bounds to extension content script. */
+  const sendBounds = useCallback(() => {
+    if (!iframeMode) return;
+    const p = posRef.current;
+    if (!p) return;
+    window.parent.postMessage(
+      { type: 'PET_BOUNDS', left: p.left, top: p.top, width: OVERLAY_OUTER_WIDTH, height: OVERLAY_OUTER_HEIGHT },
+      '*'
+    );
+  }, [iframeMode]);
+
   const showBubble = useCallback((emoji: string) => {
     setBubble({ emoji, id: Date.now() });
     setTimeout(() => setBubble(null), 1200);
@@ -120,7 +138,8 @@ export default function CompanionOverlay({ standalone = false }: CompanionOverla
       el.style.left = `${p.left}px`;
       el.style.top = `${p.top}px`;
     }
-  }, []);
+    sendBounds();
+  }, [sendBounds]);
 
   const refreshModelUrl = useCallback(async () => {
     try {
@@ -237,7 +256,14 @@ export default function CompanionOverlay({ standalone = false }: CompanionOverla
 
     posRef.current = initial;
     setPositioned(true);
-  }, [modelUrl]);
+    // Let content script know where the pet starts
+    if (iframeMode) {
+      window.parent.postMessage(
+        { type: 'PET_BOUNDS', left: initial.left, top: initial.top, width: OVERLAY_OUTER_WIDTH, height: OVERLAY_OUTER_HEIGHT },
+        '*'
+      );
+    }
+  }, [modelUrl, iframeMode]);
 
   useEffect(() => {
     function onResize() {
@@ -295,6 +321,95 @@ export default function CompanionOverlay({ standalone = false }: CompanionOverla
     window.addEventListener('mousemove', onMouseMove, { passive: true });
     return () => window.removeEventListener('mousemove', onMouseMove);
   }, []);
+
+  // ── iframe postMessage mouse relay ──────────────────────────────────────
+  useEffect(() => {
+    if (!iframeMode) return;
+
+    function onMsg(ev: MessageEvent) {
+      const d = ev.data as Record<string, unknown>;
+      if (!d || typeof d !== 'object') return;
+
+      if (d.type === 'MOUSE_MOVE' && typeof d.x === 'number' && typeof d.y === 'number') {
+        const now = performance.now();
+        mouseRef.current = { x: d.x, y: d.y };
+        lastMouseRef.current = now;
+        lastInteractionRef.current = now;
+        if (autonomousRef.current?.mode === 'seek-user') autonomousRef.current = null;
+
+        const pos = posRef.current;
+        if (pos) {
+          const pcx = pos.left + OVERLAY_OUTER_WIDTH / 2;
+          const pcy = pos.top + OVERLAY_OUTER_HEIGHT / 2;
+          const dx = d.x - pcx;
+          const dy = d.y - pcy;
+          const dist = Math.sqrt(dx * dx + dy * dy);
+          const maxD = Math.max(window.innerWidth, window.innerHeight) / 2;
+          cursorRelRef.current = {
+            x: Math.max(-1, Math.min(1, dx / maxD)),
+            y: Math.max(-1, Math.min(1, dy / maxD)),
+          };
+          const prox = Math.max(0, 1 - dist / 240);
+          proximityRef.current = prox;
+          if (prox > 0.55 && behaviorModeRef.current === 'sleep' && !autonomousRef.current) {
+            autonomousRef.current = { mode: 'roll', startMs: now, walkTarget: null };
+          }
+        }
+        return;
+      }
+
+      if (d.type === 'MOUSE_DOWN' && typeof d.x === 'number' && typeof d.y === 'number') {
+        // Simulate pointerdown on the shell
+        const pos = posRef.current;
+        if (!pos) return;
+        const pcx = pos.left + OVERLAY_OUTER_WIDTH / 2;
+        const pcy = pos.top + OVERLAY_OUTER_HEIGHT / 2;
+        const dx = d.x - pcx;
+        const dy = d.y - pcy;
+        const dist = Math.sqrt(dx * dx + dy * dy);
+        if (dist > OVERLAY_OUTER_WIDTH * 0.62) return; // outside pet — ignore
+
+        dragging.current = true;
+        isDraggingRef.current = true;
+        autonomousRef.current = null;
+        lastInteractionRef.current = performance.now();
+        pointerDownTime.current = performance.now();
+        pointerDownPos.current = { x: d.x, y: d.y };
+        dragOffset.current = { x: d.x - pos.left, y: d.y - pos.top };
+        window.parent.postMessage({ type: 'DRAG_START' }, '*');
+        return;
+      }
+
+      if (d.type === 'MOUSE_UP' && typeof d.x === 'number' && typeof d.y === 'number') {
+        if (!dragging.current) return;
+        dragging.current = false;
+        isDraggingRef.current = false;
+        if (posRef.current) saveOverlayPosition(posRef.current);
+        sendBounds();
+        window.parent.postMessage({ type: 'DRAG_END' }, '*');
+
+        const elapsed = performance.now() - pointerDownTime.current;
+        const mdx = d.x - pointerDownPos.current.x;
+        const mdy = d.y - pointerDownPos.current.y;
+        if (elapsed < 220 && Math.sqrt(mdx * mdx + mdy * mdy) < 8) {
+          clickBumpRef.current += 1;
+          const emojis = ['❤️', '🎉', '✨', '🥰', '💛'];
+          showBubble(emojis[Math.floor(Math.random() * emojis.length)]);
+          if (!autonomousRef.current) {
+            autonomousRef.current = {
+              mode: Math.random() < 0.5 ? 'chase-tail' : 'roll',
+              startMs: performance.now(),
+              walkTarget: null,
+            };
+          }
+        }
+        return;
+      }
+    }
+
+    window.addEventListener('message', onMsg);
+    return () => window.removeEventListener('message', onMsg);
+  }, [iframeMode, sendBounds, showBubble]);
 
   useEffect(() => {
     if (!modelUrl) return;
