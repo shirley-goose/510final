@@ -106,6 +106,81 @@ export default function HomePage() {
         </div>
       </section>
 
+      {/* ── Chrome Extension Banner ── */}
+      <section style={{
+        background: 'linear-gradient(135deg, #1e1e2e 0%, #2d2450 100%)',
+        borderRadius: 28,
+        padding: '36px 40px',
+        marginBottom: 28,
+        display: 'grid',
+        gridTemplateColumns: '1fr auto',
+        gap: 32,
+        alignItems: 'center',
+        position: 'relative',
+        overflow: 'hidden',
+      }}>
+        {/* Subtle decorations */}
+        <PetIcon icon="paw"     size={90}  style={{ position: 'absolute', right: 220, top: -10, opacity: 0.07, pointerEvents: 'none', transform: 'rotate(20deg)' }} />
+        <PetIcon icon="sparkle" size={36}  style={{ position: 'absolute', bottom: 20, left: '38%', opacity: 0.15, pointerEvents: 'none' }} />
+
+        <div style={{ position: 'relative', zIndex: 1 }}>
+          <span className="badge" style={{ marginBottom: 14, display: 'inline-flex', background: '#3d2f70', color: '#c4b0ff', borderColor: '#6d56c4' }}>
+            🧩 Chrome Extension
+          </span>
+          <h2 style={{ fontSize: 'clamp(22px, 3.5vw, 32px)', color: 'white', marginBottom: 10, fontFamily: 'Nunito, sans-serif', fontWeight: 900 }}>
+            Float your pet on <span style={{ color: '#c4b0ff' }}>every website</span>
+          </h2>
+          <p style={{ color: 'rgba(255,255,255,0.7)', fontSize: 15, lineHeight: 1.65, marginBottom: 20, maxWidth: 440 }}>
+            Install the free Chrome extension and your companion will follow you across
+            Gmail, YouTube, GitHub — the entire web.
+          </p>
+          <div style={{ display: 'flex', gap: 10, flexWrap: 'wrap' }}>
+            <a
+              href="/api/extension"
+              download
+              className="btn"
+              style={{ background: '#7c5cbf', boxShadow: '0 4px 0 #4a2d9c', fontSize: 15, padding: '12px 24px' }}
+            >
+              ⬇️ Download Extension
+            </a>
+            <Link href="/extension" className="btn outline" style={{ color: 'rgba(255,255,255,0.85)', borderColor: 'rgba(255,255,255,0.3)', fontSize: 15, padding: '12px 24px' }}>
+              How to install →
+            </Link>
+          </div>
+        </div>
+
+        {/* Mini 3-step visual */}
+        <div style={{
+          display: 'flex',
+          flexDirection: 'column',
+          gap: 10,
+          minWidth: 200,
+          position: 'relative',
+          zIndex: 1,
+        }}>
+          {[
+            { step: '1', label: 'Download zip' },
+            { step: '2', label: 'Load in Chrome' },
+            { step: '3', label: 'Pet appears! 🐾' },
+          ].map(({ step, label }) => (
+            <div key={step} style={{
+              display: 'flex', alignItems: 'center', gap: 10,
+              background: 'rgba(255,255,255,0.07)',
+              borderRadius: 12, padding: '10px 14px',
+            }}>
+              <span style={{
+                width: 26, height: 26, borderRadius: '50%',
+                background: '#7c5cbf', color: 'white',
+                display: 'flex', alignItems: 'center', justifyContent: 'center',
+                fontFamily: 'Nunito, sans-serif', fontWeight: 900, fontSize: 13,
+                flexShrink: 0,
+              }}>{step}</span>
+              <span style={{ color: 'rgba(255,255,255,0.85)', fontSize: 14, fontWeight: 600 }}>{label}</span>
+            </div>
+          ))}
+        </div>
+      </section>
+
       {/* ── CTA ── */}
       <section style={{
         background: 'linear-gradient(135deg, #ff8c2a, #ffb56a)',

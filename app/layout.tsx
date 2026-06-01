@@ -22,6 +22,9 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
             🐾 Pet2Companion
           </Link>
           <div className="site-nav-links">
+            <Link href="/extension" className="btn outline" style={{ padding: '8px 16px', fontSize: 14 }}>
+              🧩 Extension
+            </Link>
             <Link href="/dashboard" className="btn outline" style={{ padding: '8px 16px', fontSize: 14 }}>
               Dashboard
             </Link>
