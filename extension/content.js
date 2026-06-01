@@ -14,7 +14,7 @@
  *     drag doesn't get interrupted.
  */
 
-const PET_HOST = 'https://510final.vercel.app'; // update if self-hosted
+const PET_HOST = 'https://pet2companion.vercel.app';
 const OVERLAY_URL = `${PET_HOST}/pet-overlay`;
 const STORAGE_KEY = 'pet2companion_visible';
 
