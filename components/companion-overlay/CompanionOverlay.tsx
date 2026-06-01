@@ -76,6 +76,8 @@ export default function CompanionOverlay({ standalone = false }: CompanionOverla
   const [personality, setPersonality] = useState<CompanionPersonality>('calm');
   /** Gates first render; all subsequent position updates go through applyPosition (no re-render). */
   const [positioned, setPositioned] = useState(false);
+  /** Emoji bubble: appears on interaction and floats away. */
+  const [bubble, setBubble] = useState<{ emoji: string; id: number } | null>(null);
 
   const shellRef = useRef<HTMLDivElement>(null);
   const dragging = useRef(false);
@@ -88,10 +90,19 @@ export default function CompanionOverlay({ standalone = false }: CompanionOverla
   const posRef = useRef<{ left: number; top: number } | null>(null);
   const animParamsRef = useRef(getBehaviorAnimParams('calm'));
   const autonomousRef = useRef<AutonomousState | null>(null);
-  /** Normalized cursor position relative to pet center — for look-at in canvas. */
+  /** Normalized cursor position relative to pet center (-1..1). */
   const cursorRelRef = useRef({ x: 0, y: 0 });
+  /** Cursor proximity to pet center: 0 = far, 1 = touching. */
+  const proximityRef = useRef(0);
   /** Incremented on each click/tap — canvas watches for changes. */
   const clickBumpRef = useRef(0);
+  /** True while pet is being dragged — canvas shows excited anim. */
+  const isDraggingRef = useRef(false);
+
+  const showBubble = useCallback((emoji: string) => {
+    setBubble({ emoji, id: Date.now() });
+    setTimeout(() => setBubble(null), 1200);
+  }, []);
 
   const suppressFloatingChrome =
     !standalone &&
@@ -257,20 +268,28 @@ export default function CompanionOverlay({ standalone = false }: CompanionOverla
       const now = performance.now();
       lastMouseRef.current = now;
       lastInteractionRef.current = now;
-      // Any mouse movement cancels seek-user
-      if (autonomousRef.current?.mode === 'seek-user') {
-        autonomousRef.current = null;
-      }
-      // Update cursor-relative position for look-at
+      if (autonomousRef.current?.mode === 'seek-user') autonomousRef.current = null;
+
       const pos = posRef.current;
       if (pos) {
         const pcx = pos.left + OVERLAY_OUTER_WIDTH / 2;
         const pcy = pos.top + OVERLAY_OUTER_HEIGHT / 2;
+        const dx = ev.clientX - pcx;
+        const dy = ev.clientY - pcy;
+        const dist = Math.sqrt(dx * dx + dy * dy);
         const maxD = Math.max(window.innerWidth, window.innerHeight) / 2;
         cursorRelRef.current = {
-          x: Math.max(-1, Math.min(1, (ev.clientX - pcx) / maxD)),
-          y: Math.max(-1, Math.min(1, (ev.clientY - pcy) / maxD)),
+          x: Math.max(-1, Math.min(1, dx / maxD)),
+          y: Math.max(-1, Math.min(1, dy / maxD)),
         };
+        // Proximity: 1 at center, 0 at 240px away
+        const prox = Math.max(0, 1 - dist / 240);
+        proximityRef.current = prox;
+
+        // Wake from sleep when cursor gets close
+        if (prox > 0.55 && behaviorModeRef.current === 'sleep' && !autonomousRef.current) {
+          autonomousRef.current = { mode: 'roll', startMs: now, walkTarget: null };
+        }
       }
     }
     window.addEventListener('mousemove', onMouseMove, { passive: true });
@@ -423,6 +442,7 @@ export default function CompanionOverlay({ standalone = false }: CompanionOverla
     if ((e.target as HTMLElement).closest('.companion-no-drag')) return;
     e.preventDefault();
     dragging.current = true;
+    isDraggingRef.current = true;
     autonomousRef.current = null;
     lastInteractionRef.current = performance.now();
     pointerDownTime.current = performance.now();
@@ -455,19 +475,20 @@ export default function CompanionOverlay({ standalone = false }: CompanionOverla
     } catch {
       /* ignore */
     }
+    isDraggingRef.current = false;
     if (posRef.current) saveOverlayPosition(posRef.current);
 
-    // Short tap (< 200ms, < 8px moved) = click → trigger happy reaction
-    const dt = performance.now() - pointerDownTime.current;
+    // Short tap (< 220ms, < 8px moved) = click → happy reaction
+    const elapsed = performance.now() - pointerDownTime.current;
     const dx = e.clientX - pointerDownPos.current.x;
     const dy = e.clientY - pointerDownPos.current.y;
-    if (dt < 200 && Math.sqrt(dx * dx + dy * dy) < 8) {
+    if (elapsed < 220 && Math.sqrt(dx * dx + dy * dy) < 8) {
       clickBumpRef.current += 1;
-      // Also trigger a quick playful behavior
+      const emojis = ['❤️', '🎉', '✨', '🥰', '💛'];
+      showBubble(emojis[Math.floor(Math.random() * emojis.length)]);
       if (!autonomousRef.current) {
-        const r = Math.random();
         autonomousRef.current = {
-          mode: r < 0.5 ? 'chase-tail' : 'roll',
+          mode: Math.random() < 0.5 ? 'chase-tail' : 'roll',
           startMs: performance.now(),
           walkTarget: null,
         };
@@ -524,6 +545,21 @@ export default function CompanionOverlay({ standalone = false }: CompanionOverla
           ⌂
         </button>
       </div>
+      {/* Emoji bubble */}
+      {bubble && (
+        <div key={bubble.id} style={{
+          position: 'absolute',
+          top: -8,
+          left: '50%',
+          transform: 'translateX(-50%)',
+          fontSize: 28,
+          pointerEvents: 'none',
+          animation: 'bubbleFloat 1.2s ease-out forwards',
+          zIndex: 10,
+        }}>
+          {bubble.emoji}
+        </div>
+      )}
       <CompanionViewerCanvas
         url={modelUrl}
         personality={personality}
@@ -532,6 +568,8 @@ export default function CompanionOverlay({ standalone = false }: CompanionOverla
         animParamsRef={animParamsRef}
         cursorRelRef={cursorRelRef}
         clickBumpRef={clickBumpRef}
+        proximityRef={proximityRef}
+        isDraggingRef={isDraggingRef}
       />
     </div>
   );

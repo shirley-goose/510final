@@ -253,3 +253,9 @@ main {
   overflow: hidden;
   border: none;
 }
+
+@keyframes bubbleFloat {
+  0%   { opacity: 1; transform: translateX(-50%) translateY(0) scale(0.6); }
+  30%  { opacity: 1; transform: translateX(-50%) translateY(-18px) scale(1.2); }
+  100% { opacity: 0; transform: translateX(-50%) translateY(-52px) scale(0.9); }
+}

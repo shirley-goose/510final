@@ -13,10 +13,12 @@ type CompanionViewerCanvasProps = {
   behaviorRef: MutableRefObject<BehaviorMode>;
   velocityRef: MutableRefObject<{ x: number; y: number }>;
   animParamsRef: MutableRefObject<BehaviorAnimParams>;
-  /** Normalized cursor position relative to pet center (-1..1). Used for look-at. */
   cursorRelRef: MutableRefObject<{ x: number; y: number }>;
-  /** Bumps when user clicks/taps the pet — triggers a happy reaction. */
   clickBumpRef: MutableRefObject<number>;
+  /** 0 = far, 1 = cursor touching pet — drives excitement level. */
+  proximityRef: MutableRefObject<number>;
+  /** True while being dragged — shows excited/lifted animation. */
+  isDraggingRef: MutableRefObject<boolean>;
 };
 
 const animParamsFallback: BehaviorAnimParams = {
@@ -41,6 +43,8 @@ function AnimatedModelInner({
   animParamsRef,
   cursorRelRef,
   clickBumpRef,
+  proximityRef,
+  isDraggingRef,
 }: CompanionViewerCanvasProps) {
   const gltf = useGLTF(url);
   const sceneClone = useMemo(() => gltf.scene.clone(true), [gltf.scene]);
@@ -73,14 +77,31 @@ function AnimatedModelInner({
     const speed = velScratch.length();
     const nlx = speed > 1e-4 ? vel.x / speed : 0;
 
-    // Click reaction — bounce & wiggle
+    // Click reaction — big bounce & wiggle
     if (clickBumpRef.current !== lastClickBump.current) {
       lastClickBump.current = clickBumpRef.current;
       clickReact.current = 1;
     }
-    clickReact.current *= Math.exp(-5 * dt);
-    const clickWiggle = Math.sin(t * 18) * clickReact.current * 0.35;
-    const clickBounce = clickReact.current * 0.12;
+    clickReact.current *= Math.exp(-4 * dt);
+    const clickWiggle = Math.sin(t * 20) * clickReact.current * 0.55;
+    const clickBounce = clickReact.current * 0.22;
+
+    // Proximity excitement — scales up and wiggles when cursor is near
+    const prox = proximityRef.current;
+    const exciteScale = 1 + prox * 0.12;
+    const exciteWiggle = prox > 0.4 ? Math.sin(t * 11 + 0.5) * prox * 0.1 : 0;
+
+    // Drag animation — lifted, spinning slightly
+    if (isDraggingRef.current) {
+      smoothRot.current.x += (Math.sin(t * 5) * 0.12 - smoothRot.current.x) * Math.min(1, 10 * dt);
+      smoothRot.current.y += (Math.sin(t * 3) * 0.25 - smoothRot.current.y) * Math.min(1, 10 * dt);
+      smoothRot.current.z += (Math.sin(t * 4 + 1) * 0.18 - smoothRot.current.z) * Math.min(1, 10 * dt);
+      smoothScale.current += (1.18 - smoothScale.current) * Math.min(1, 8 * dt);
+      g.rotation.set(smoothRot.current.x, smoothRot.current.y, smoothRot.current.z);
+      g.scale.setScalar(smoothScale.current);
+      g.position.y = 0.06 + Math.sin(t * 6) * 0.025;
+      return;
+    }
 
     // --- Chase tail: fast spin in place ---
     if (mode === 'chase-tail') {
@@ -179,17 +200,22 @@ function AnimatedModelInner({
     sleepBlend.current += (targetSleep - sleepBlend.current) * Math.min(1, dt * 3.2);
     const sleepAmt = sleepBlend.current;
 
-    // Cursor look-at: subtle head turns toward cursor when idle/sleep
-    const cursorLookX = cursorRelRef.current.y * -0.18 * (1 - sleepAmt);
-    const cursorLookY = cursorRelRef.current.x *  0.22 * (1 - sleepAmt);
+    // Cursor look-at: head turns toward cursor — stronger when nearby
+    const lookStrength = THREE.MathUtils.lerp(0.28, 0.55, prox) * (1 - sleepAmt);
+    const cursorLookX = cursorRelRef.current.y * -lookStrength;
+    const cursorLookY = cursorRelRef.current.x *  lookStrength * 1.2;
 
     const swayDamp = THREE.MathUtils.lerp(1, 0.2, sleepAmt);
-    const targetX = swayDamp * (breathe + Math.sin(t * 0.6) * 0.04 * (1 - sleepAmt)) - sleepAmt * 0.38 + cursorLookX + clickWiggle;
+    const targetX = swayDamp * (breathe + Math.sin(t * 0.6) * 0.04 * (1 - sleepAmt)) - sleepAmt * 0.38 + cursorLookX + clickWiggle + exciteWiggle;
     const targetY =
       flourishY.current +
       swayDamp * (0.035 * Math.sin(t * 1.03) - sleepAmt * 0.06) + cursorLookY;
     const targetZ = swayDamp * sway + followLean - sleepAmt * 0.12 + clickWiggle * 0.5;
-    const targetScale = THREE.MathUtils.lerp(1 + breathe * 0.012 + clickBounce, 0.93, sleepAmt);
+    const targetScale = THREE.MathUtils.lerp(
+      (1 + breathe * 0.012 + clickBounce) * exciteScale,
+      0.93,
+      sleepAmt
+    );
 
     const k =
       sleepAmt > 0.92 ? 3.6 : sleepAmt > 0.06 ? (mode === 'follow' ? 10 : 5.2) : mode === 'follow' ? 10 : 5.5;
@@ -221,6 +247,8 @@ export function CompanionViewerCanvas({
   animParamsRef,
   cursorRelRef,
   clickBumpRef,
+  proximityRef,
+  isDraggingRef,
 }: CompanionViewerCanvasProps) {
   return (
     <Canvas
@@ -241,6 +269,8 @@ export function CompanionViewerCanvas({
           animParamsRef={animParamsRef}
           cursorRelRef={cursorRelRef}
           clickBumpRef={clickBumpRef}
+          proximityRef={proximityRef}
+          isDraggingRef={isDraggingRef}
         />
       </Suspense>
     </Canvas>
