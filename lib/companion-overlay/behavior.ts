@@ -37,9 +37,9 @@ export function getBehaviorAnimParams(personality: CompanionPersonality): Behavi
         idleSpeed: 1.35,
         followLeanScale: 1.15,
         playfulFlourishChance: 0,
-        walkChance: 0.007,
-        chaseTailChance: 0.004,
-        rollChance: 0.002,
+        walkChance: 0.06,        // ~17s average
+        chaseTailChance: 0.08,   // ~12s average
+        rollChance: 0.05,        // ~20s average
       };
     case 'playful':
       return {
@@ -49,9 +49,9 @@ export function getBehaviorAnimParams(personality: CompanionPersonality): Behavi
         idleSpeed: 1.2,
         followLeanScale: 1.25,
         playfulFlourishChance: 0.12,
-        walkChance: 0.005,
-        chaseTailChance: 0.007,
-        rollChance: 0.006,
+        walkChance: 0.05,        // ~20s average
+        chaseTailChance: 0.10,   // ~10s average
+        rollChance: 0.07,        // ~14s average
       };
     case 'calm':
     default:
@@ -62,9 +62,9 @@ export function getBehaviorAnimParams(personality: CompanionPersonality): Behavi
         idleSpeed: 0.65,
         followLeanScale: 0.7,
         playfulFlourishChance: 0,
-        walkChance: 0.002,
-        chaseTailChance: 0.002,
-        rollChance: 0.0015,
+        walkChance: 0.033,       // ~30s average
+        chaseTailChance: 0.05,   // ~20s average
+        rollChance: 0.025,       // ~40s average
       };
   }
 }

@@ -88,6 +88,10 @@ export default function CompanionOverlay({ standalone = false }: CompanionOverla
   const posRef = useRef<{ left: number; top: number } | null>(null);
   const animParamsRef = useRef(getBehaviorAnimParams('calm'));
   const autonomousRef = useRef<AutonomousState | null>(null);
+  /** Normalized cursor position relative to pet center — for look-at in canvas. */
+  const cursorRelRef = useRef({ x: 0, y: 0 });
+  /** Incremented on each click/tap — canvas watches for changes. */
+  const clickBumpRef = useRef(0);
 
   const suppressFloatingChrome =
     !standalone &&
@@ -257,6 +261,17 @@ export default function CompanionOverlay({ standalone = false }: CompanionOverla
       if (autonomousRef.current?.mode === 'seek-user') {
         autonomousRef.current = null;
       }
+      // Update cursor-relative position for look-at
+      const pos = posRef.current;
+      if (pos) {
+        const pcx = pos.left + OVERLAY_OUTER_WIDTH / 2;
+        const pcy = pos.top + OVERLAY_OUTER_HEIGHT / 2;
+        const maxD = Math.max(window.innerWidth, window.innerHeight) / 2;
+        cursorRelRef.current = {
+          x: Math.max(-1, Math.min(1, (ev.clientX - pcx) / maxD)),
+          y: Math.max(-1, Math.min(1, (ev.clientY - pcy) / maxD)),
+        };
+      }
     }
     window.addEventListener('mousemove', onMouseMove, { passive: true });
     return () => window.removeEventListener('mousemove', onMouseMove);
@@ -401,12 +416,17 @@ export default function CompanionOverlay({ standalone = false }: CompanionOverla
     return () => window.cancelAnimationFrame(rafId);
   }, [modelUrl, applyPosition]);
 
+  const pointerDownTime = useRef(0);
+  const pointerDownPos = useRef({ x: 0, y: 0 });
+
   const onDragStart = (e: React.PointerEvent) => {
     if ((e.target as HTMLElement).closest('.companion-no-drag')) return;
     e.preventDefault();
     dragging.current = true;
     autonomousRef.current = null;
     lastInteractionRef.current = performance.now();
+    pointerDownTime.current = performance.now();
+    pointerDownPos.current = { x: e.clientX, y: e.clientY };
     dragOffset.current = {
       x: e.clientX - (posRef.current?.left ?? 0),
       y: e.clientY - (posRef.current?.top ?? 0),
@@ -436,6 +456,23 @@ export default function CompanionOverlay({ standalone = false }: CompanionOverla
       /* ignore */
     }
     if (posRef.current) saveOverlayPosition(posRef.current);
+
+    // Short tap (< 200ms, < 8px moved) = click → trigger happy reaction
+    const dt = performance.now() - pointerDownTime.current;
+    const dx = e.clientX - pointerDownPos.current.x;
+    const dy = e.clientY - pointerDownPos.current.y;
+    if (dt < 200 && Math.sqrt(dx * dx + dy * dy) < 8) {
+      clickBumpRef.current += 1;
+      // Also trigger a quick playful behavior
+      if (!autonomousRef.current) {
+        const r = Math.random();
+        autonomousRef.current = {
+          mode: r < 0.5 ? 'chase-tail' : 'roll',
+          startMs: performance.now(),
+          walkTarget: null,
+        };
+      }
+    }
   };
 
   const resetPositionForCornerDefault = () => {
@@ -493,6 +530,8 @@ export default function CompanionOverlay({ standalone = false }: CompanionOverla
         behaviorRef={behaviorModeRef}
         velocityRef={velocityRef}
         animParamsRef={animParamsRef}
+        cursorRelRef={cursorRelRef}
+        clickBumpRef={clickBumpRef}
       />
     </div>
   );
