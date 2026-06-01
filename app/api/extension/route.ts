@@ -35,7 +35,7 @@ export async function GET() {
 
   const buf = await zip.generateAsync({ type: 'nodebuffer', compression: 'DEFLATE' });
 
-  return new NextResponse(buf, {
+  return new NextResponse(new Uint8Array(buf), {
     status: 200,
     headers: {
       'Content-Type': 'application/zip',
