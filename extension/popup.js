@@ -1,8 +1,20 @@
-const btn = document.getElementById('toggleBtn');
+const btn        = document.getElementById('toggleBtn');
+const statusEl   = document.getElementById('status');
+const MODEL_KEY  = 'pet2companion_model_url';
 
 function setBtn(visible) {
   btn.textContent = visible ? '🐾 Hide pet' : '🐾 Show pet';
   btn.className   = visible ? 'toggle-btn on' : 'toggle-btn off';
+}
+
+function setStatus(modelUrl) {
+  if (modelUrl) {
+    statusEl.innerHTML = `<span style="color:#027a48">✓ Pet synced</span>`;
+  } else {
+    statusEl.innerHTML = `⚠️ No pet synced yet.<br>
+      <a href="https://pet2companion.vercel.app" target="_blank">Open Pet2Companion</a>
+      and wait 3 seconds, then come back.`;
+  }
 }
 
 async function getCurrentTab() {
@@ -10,22 +22,21 @@ async function getCurrentTab() {
   return tab;
 }
 
-// Inject content script if not already running, then send a message.
 async function sendToTab(tabId, msg) {
-  // First try directly
   try {
     return await chrome.tabs.sendMessage(tabId, msg);
   } catch (_) {
-    // Content script not present — inject it now
     await chrome.scripting.executeScript({ target: { tabId }, files: ['content.js'] });
-    // Small delay for script to initialise
-    await new Promise(r => setTimeout(r, 120));
+    await new Promise(r => setTimeout(r, 150));
     return await chrome.tabs.sendMessage(tabId, msg);
   }
 }
 
-// Init button state
+// Init
 (async () => {
+  // Show model sync status
+  chrome.storage.local.get([MODEL_KEY], (r) => setStatus(r[MODEL_KEY] || null));
+
   const tab = await getCurrentTab();
   if (!tab?.id) { setBtn(false); return; }
   try {
