@@ -1,24 +1,31 @@
 import type { CSSProperties } from 'react';
 
-/** Twemoji SVG CDN — CC-BY 4.0, Twitter/Twemoji */
-const CDN = 'https://cdn.jsdelivr.net/gh/twitter/twemoji@14.0.2/assets/svg';
+/** Microsoft Fluent Emoji 3D — MIT License */
+const CDN = 'https://cdn.jsdelivr.net/gh/microsoft/fluentui-emoji@latest/assets';
 
 const ICONS = {
-  dog:     `${CDN}/1f436.svg`,   // 🐶
-  cat:     `${CDN}/1f431.svg`,   // 🐱
-  rabbit:  `${CDN}/1f430.svg`,   // 🐰
-  hamster: `${CDN}/1f439.svg`,   // 🐹
-  paw:     `${CDN}/1f43e.svg`,   // 🐾
-  bone:    `${CDN}/1f9b4.svg`,   // 🦴
-  star:    `${CDN}/2b50.svg`,    // ⭐
-  heart:   `${CDN}/1f49b.svg`,   // 💛
-  sparkle: `${CDN}/2728.svg`,    // ✨
-  dogFace: `${CDN}/1f415.svg`,   // 🐕
-  fish:    `${CDN}/1f41f.svg`,   // 🐟
+  dog:          `${CDN}/Dog%20face/3D/dog_face_3d.png`,
+  cat:          `${CDN}/Cat%20face/3D/cat_face_3d.png`,
+  rabbit:       `${CDN}/Rabbit%20face/3D/rabbit_face_3d.png`,
+  hamster:      `${CDN}/Hamster/3D/hamster_3d.png`,
+  bear:         `${CDN}/Bear/3D/bear_3d.png`,
+  paw:          `${CDN}/Paw%20prints/3D/paw_prints_3d.png`,
+  bone:         `${CDN}/Bone/3D/bone_3d.png`,
+  star:         `${CDN}/Star/3D/star_3d.png`,
+  sparkle:      `${CDN}/Sparkles/3D/sparkles_3d.png`,
+  heart:        `${CDN}/Sparkling%20heart/3D/sparkling_heart_3d.png`,
+  dogFull:      `${CDN}/Dog/3D/dog_3d.png`,
+  catFull:      `${CDN}/Cat/3D/cat_3d.png`,
+  sleep:        `${CDN}/Sleeping%20face/3D/sleeping_face_3d.png`,
+  party:        `${CDN}/Party%20popper/3D/party_popper_3d.png`,
+  balloon:      `${CDN}/Balloon/3D/balloon_3d.png`,
+  rainbow:      `${CDN}/Rainbow/3D/rainbow_3d.png`,
 };
 
+export type PetIconName = keyof typeof ICONS;
+
 type PetIconProps = {
-  icon: keyof typeof ICONS;
+  icon: PetIconName;
   size?: number;
   style?: CSSProperties;
   className?: string;
@@ -34,16 +41,8 @@ export function PetIcon({ icon, size = 64, style, className, alt = '' }: PetIcon
       width={size}
       height={size}
       className={className}
-      style={{ display: 'block', ...style }}
+      style={{ display: 'block', objectFit: 'contain', ...style }}
       draggable={false}
     />
   );
 }
-
-// Named convenience exports used in page.tsx
-export const DogSitting  = (p: Omit<PetIconProps, 'icon'>) => <PetIcon icon="dog"     {...p} />;
-export const CatSitting  = (p: Omit<PetIconProps, 'icon'>) => <PetIcon icon="cat"     {...p} />;
-export const DogRunning  = (p: Omit<PetIconProps, 'icon'>) => <PetIcon icon="dogFace" {...p} />;
-export const PawPrint    = (p: Omit<PetIconProps, 'icon'>) => <PetIcon icon="paw"     {...p} />;
-export const Bone        = (p: Omit<PetIconProps, 'icon'>) => <PetIcon icon="bone"    {...p} />;
-export const Star        = (p: Omit<PetIconProps, 'icon'>) => <PetIcon icon="star"    {...p} />;
