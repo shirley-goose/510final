@@ -39,7 +39,7 @@ export default function HomePage() {
             on your screen.
           </h1>
           <p style={{ fontSize: 18, lineHeight: 1.7, color: '#5a5a6a', marginBottom: 32 }}>
-            Upload 1–5 photos of your pet and we'll generate a 3D companion that floats above your screen — it sleeps, wanders, chases its tail, and comes to find you! 🐶
+            Upload 1–5 photos of your pet and we&apos;ll generate a 3D companion that floats above your screen — it sleeps, wanders, chases its tail, and comes to find you! 🐶
           </p>
           <div style={{ display: 'flex', gap: 12, flexWrap: 'wrap' }}>
             <Link href="/upload" className="btn" style={{ fontSize: 16, padding: '14px 28px' }}>
