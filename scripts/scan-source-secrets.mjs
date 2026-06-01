@@ -22,7 +22,7 @@ const EXT = new Set(['.ts', '.tsx', '.mjs', '.js']);
 /** Obvious hardcoded secrets (narrow names to avoid e.g. MESHY_BASE public URL). */
 const HARDCODED_ASSIGN = [
   /^\s*(?:export\s+)?(?:const|let|var)\s+MESHY_API_KEY\s*=\s*['"][^'"]{8,}['"]/m,
-  /^\s*(?:export\s+)?(?:const|let|var)\s+THREED_AI_STUDIO_API_KEY\s*=\s*['"][^'"]{8,}['"]/m,
+  /^\s*(?:export\s+)?(?:const|let|var)\s+TRIPO_API_KEY\s*=\s*['"][^'"]{8,}['"]/m,
   /^\s*SUPABASE_SERVICE_ROLE_KEY\s*=\s*['"][^'"]{12,}['"]/m,
 ];
 
