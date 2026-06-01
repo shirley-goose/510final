@@ -2,131 +2,59 @@
   box-sizing: border-box;
 }
 
+/* Frameless: fully transparent shell, no border or background */
 .companion-overlay-shell {
-  pointer-events: none;
-  opacity: 0.98;
-  border-radius: 16px;
+  background: transparent;
+  border: none;
+  box-shadow: none;
   outline: none;
-  position: relative;
-  background: radial-gradient(
-      ellipse 120% 80% at 50% -20%,
-      rgba(255, 226, 180, 0.35),
-      transparent 55%
-    ),
-    rgba(255, 255, 255, 0.32);
-  backdrop-filter: blur(14px);
-  box-shadow:
-    0 18px 48px rgba(15, 20, 35, 0.18),
-    0 2px 0 rgba(255, 255, 255, 0.45) inset;
-  border: 1px solid rgba(255, 255, 255, 0.55);
-}
-
-.companion-overlay-chrome.companion-drag-target {
-  height: 36px;
-  display: flex;
-  align-items: center;
-  justify-content: flex-end;
-  gap: 6px;
-  padding: 6px 8px;
-  cursor: grab;
-  border-radius: 16px 16px 0 0;
   pointer-events: auto;
+  cursor: grab;
+  user-select: none;
 }
 
-.companion-overlay-shell:active .companion-overlay-chrome {
+.companion-overlay-shell:active {
   cursor: grabbing;
 }
 
-.companion-drag-hint {
-  pointer-events: none;
-  user-select: none;
-  flex: 1;
-  font-size: 11px;
-  font-weight: 600;
-  color: rgba(30, 30, 30, 0.78);
+/* Hover-only action buttons — top-right corner, fade in on hover */
+.companion-controls {
+  position: absolute;
+  top: 6px;
+  right: 6px;
+  z-index: 1;
+  display: flex;
+  gap: 4px;
+  opacity: 0;
+  transition: opacity 0.18s ease;
+  pointer-events: auto;
+}
+
+.companion-overlay-shell:hover .companion-controls {
+  opacity: 1;
 }
 
 .companion-mini-btn {
   pointer-events: auto;
   cursor: pointer;
-  font: inherit;
-  font-size: 11px;
-  font-weight: 600;
+  font: 600 13px/1 system-ui, sans-serif;
   border: none;
   border-radius: 8px;
-  padding: 4px 8px;
-  background: rgba(46, 46, 46, 0.9);
+  padding: 5px 9px;
+  background: rgba(20, 20, 20, 0.7);
   color: #fff;
+  backdrop-filter: blur(6px);
+  transition: background 0.12s;
+}
+
+.companion-mini-btn:hover {
+  background: rgba(20, 20, 20, 0.92);
 }
 
 .companion-mini-btn:active {
   transform: translateY(0.5px);
 }
 
-/* Prevent drag-strip pointer handlers from bubbling into shell drag */
 .companion-no-drag {
   touch-action: manipulation;
-}
-
-.companion-overlay-gl {
-  width: 100%;
-  height: calc(var(--overlay-h, 296px) - 36px - 28px);
-  border-radius: 0 0 16px 16px;
-  overflow: hidden;
-  pointer-events: none;
-}
-
-.companion-overlay-shell.companion-chrome-hidden .companion-overlay-gl {
-  height: calc(var(--overlay-h, 296px) - 10px);
-  border-radius: 0 0 16px 16px;
-}
-
-.companion-overlay-drag-edge {
-  height: 10px;
-  cursor: grab;
-  pointer-events: auto;
-  border-radius: 16px 16px 0 0;
-}
-
-.companion-overlay-shell.companion-chrome-hidden:active .companion-overlay-drag-edge {
-  cursor: grabbing;
-}
-
-.companion-show-chrome-btn {
-  position: absolute;
-  top: 6px;
-  right: 6px;
-  z-index: 2;
-  pointer-events: auto;
-  cursor: pointer;
-  font: inherit;
-  font-size: 10px;
-  font-weight: 700;
-  border: none;
-  border-radius: 6px;
-  padding: 3px 7px;
-  background: rgba(46, 46, 46, 0.72);
-  color: #fff;
-  opacity: 0.35;
-  transition: opacity 0.15s ease;
-}
-
-.companion-overlay-shell.companion-chrome-hidden:hover .companion-show-chrome-btn {
-  opacity: 1;
-}
-
-.companion-overlay-scope {
-  --overlay-h: 296px;
-  height: var(--overlay-h);
-}
-
-.companion-desktop-note {
-  display: block;
-  padding: 4px 10px 6px;
-  font-size: 9px;
-  line-height: 1.35;
-  color: rgba(30, 30, 30, 0.6);
-  text-align: center;
-  pointer-events: none;
-  user-select: none;
 }

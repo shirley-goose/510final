@@ -1,31 +1,17 @@
 export type CompanionCorner = 'tl' | 'tr' | 'bl' | 'br';
 
-/** Sync with CSS (`.companion-overlay` width/height incl. chrome). */
-export const OVERLAY_OUTER_WIDTH = 280;
-export const OVERLAY_OUTER_HEIGHT = 296;
+/** Frameless square canvas — no chrome bar overhead. */
+export const OVERLAY_OUTER_WIDTH = 220;
+export const OVERLAY_OUTER_HEIGHT = 220;
 
 export const OVERLAY_LS_POSITION = 'pet2companion:overlay-position';
-export const OVERLAY_CHROME_HIDDEN_LS = 'pet2companion:hide-chrome';
 export const LAST_MODEL_LS = 'pet2companion:last-model-url';
-
-/** Browser tabs cannot lift above other desktop apps — use a detached popup for a smaller always-on-browser-stack window (see overlay UI). */
 
 export function readDefaultCorner(): CompanionCorner {
   const raw =
     typeof process.env.NEXT_PUBLIC_DEFAULT_COMPANION_CORNER === 'string'
       ? process.env.NEXT_PUBLIC_DEFAULT_COMPANION_CORNER.toLowerCase().trim()
       : 'br';
-  if (raw === 'tl' || raw === 'tr' || raw === 'bl' || raw === 'br') {
-    return raw;
-  }
+  if (raw === 'tl' || raw === 'tr' || raw === 'bl' || raw === 'br') return raw;
   return 'br';
-}
-
-/** Y-axis rotation (radians) so image-to-3D GLBs face the camera. Tripo exports side-on by default. */
-export function readCompanionModelYRotationRad(): number {
-  const raw = process.env.NEXT_PUBLIC_COMPANION_MODEL_Y_ROTATION?.trim();
-  if (!raw) return -Math.PI / 2;
-  const deg = Number(raw);
-  if (!Number.isFinite(deg)) return -Math.PI / 2;
-  return (deg * Math.PI) / 180;
 }

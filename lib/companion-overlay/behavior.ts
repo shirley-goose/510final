@@ -1,26 +1,32 @@
 import type { CompanionPersonality } from './personalities';
 
-export type BehaviorMode = 'idle' | 'follow' | 'sleep';
+export type BehaviorMode = 'idle' | 'follow' | 'sleep' | 'walk' | 'chase-tail' | 'roll' | 'seek-user';
 
 /** No mouse movement for this long → companion sleeps. */
 export const MOUSE_SLEEP_AFTER_MS = 5 * 60 * 1000;
+/** No user interaction for this long → companion seeks user. */
+export const SEEK_USER_AFTER_MS = 40 * 60 * 1000;
 
-export type BehaviorAnimParams = {
-  /** Larger → companion reaches cursor faster (exponential follow smoothing). */
-  followSmoothness: number;
-  /** Seconds without movement before we treat cursor as stationary (idle sway). */
-  idleAfterStillMs: number;
-  /** Base idle sway amplitude (viewer scales radians). */
-  idleSwayScale: number;
-  /** Idle breathing / sway tempo multiplier. */
-  idleSpeed: number;
-  /** Tilt toward walk direction multiplier during follow. */
-  followLeanScale: number;
-  /** Probability per second during idle for a playful flourish (playful only). */
-  playfulFlourishChance: number;
+/** How long each autonomous behavior lasts (ms) before returning to idle. */
+export const AUTONOMOUS_DURATION_MS: Partial<Record<BehaviorMode, number>> = {
+  walk: 9000,
+  'chase-tail': 5500,
+  roll: 6000,
+  'seek-user': 15000,
 };
 
-/** Animation & follow tuning keyed by SPEC personalities. */
+export type BehaviorAnimParams = {
+  followSmoothness: number;
+  idleAfterStillMs: number;
+  idleSwayScale: number;
+  idleSpeed: number;
+  followLeanScale: number;
+  playfulFlourishChance: number;
+  walkChance: number;
+  chaseTailChance: number;
+  rollChance: number;
+};
+
 export function getBehaviorAnimParams(personality: CompanionPersonality): BehaviorAnimParams {
   switch (personality) {
     case 'active':
@@ -31,6 +37,9 @@ export function getBehaviorAnimParams(personality: CompanionPersonality): Behavi
         idleSpeed: 1.35,
         followLeanScale: 1.15,
         playfulFlourishChance: 0,
+        walkChance: 0.007,
+        chaseTailChance: 0.004,
+        rollChance: 0.002,
       };
     case 'playful':
       return {
@@ -40,6 +49,9 @@ export function getBehaviorAnimParams(personality: CompanionPersonality): Behavi
         idleSpeed: 1.2,
         followLeanScale: 1.25,
         playfulFlourishChance: 0.12,
+        walkChance: 0.005,
+        chaseTailChance: 0.007,
+        rollChance: 0.006,
       };
     case 'calm':
     default:
@@ -50,19 +62,18 @@ export function getBehaviorAnimParams(personality: CompanionPersonality): Behavi
         idleSpeed: 0.65,
         followLeanScale: 0.7,
         playfulFlourishChance: 0,
+        walkChance: 0.002,
+        chaseTailChance: 0.002,
+        rollChance: 0.0015,
       };
   }
 }
 
-/**
- * Discrete behavior states for the overlay — use one threshold for “cursor active” vs idle sway.
- * Follow runs while mouse is actively moving recently; waking from sleep jumps straight to follow.
- */
 export function resolveBehaviorModeWithIdleThreshold(
   nowMs: number,
   lastMouseMoveMs: number,
   idleAfterStillMs: number,
-): BehaviorMode {
+): 'sleep' | 'follow' | 'idle' {
   const sinceMove = nowMs - lastMouseMoveMs;
   if (sinceMove >= MOUSE_SLEEP_AFTER_MS) return 'sleep';
   if (sinceMove < idleAfterStillMs) return 'follow';
