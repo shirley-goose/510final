@@ -72,10 +72,7 @@ export function getBehaviorAnimParams(personality: CompanionPersonality): Behavi
 export function resolveBehaviorModeWithIdleThreshold(
   nowMs: number,
   lastMouseMoveMs: number,
-  idleAfterStillMs: number,
-): 'sleep' | 'follow' | 'idle' {
-  const sinceMove = nowMs - lastMouseMoveMs;
-  if (sinceMove >= MOUSE_SLEEP_AFTER_MS) return 'sleep';
-  if (sinceMove < idleAfterStillMs) return 'follow';
+): 'sleep' | 'idle' {
+  if (nowMs - lastMouseMoveMs >= MOUSE_SLEEP_AFTER_MS) return 'sleep';
   return 'idle';
 }

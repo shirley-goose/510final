@@ -284,7 +284,7 @@ export default function CompanionOverlay({ standalone = false }: CompanionOverla
       if (!prev) return;
 
       const anim = animParamsRef.current;
-      const baseMode = resolveBehaviorModeWithIdleThreshold(ts, lastMouseRef.current, anim.idleAfterStillMs);
+      const baseMode = resolveBehaviorModeWithIdleThreshold(ts, lastMouseRef.current);
 
       // Trigger seek-user after prolonged inactivity
       if (ts - lastInteractionRef.current >= SEEK_USER_AFTER_MS && !autonomousRef.current) {
@@ -375,49 +375,26 @@ export default function CompanionOverlay({ standalone = false }: CompanionOverla
         return;
       }
 
-      // No autonomous state — handle base modes
-      if (baseMode !== 'follow') {
-        const decay = Math.exp(-14 * dt);
-        velocityRef.current.x *= decay;
-        velocityRef.current.y *= decay;
-        behaviorModeRef.current = baseMode;
+      // No autonomous state — pet stays in place, velocity decays
+      const decay = Math.exp(-14 * dt);
+      velocityRef.current.x *= decay;
+      velocityRef.current.y *= decay;
+      behaviorModeRef.current = baseMode;
 
-        // Randomly trigger autonomous behaviors when idle
-        if (baseMode === 'idle') {
-          const r = Math.random();
-          const wp = anim.walkChance * dt;
-          const cp = anim.chaseTailChance * dt;
-          const rp = anim.rollChance * dt;
-          if (r < wp) {
-            autonomousRef.current = { mode: 'walk', startMs: ts, walkTarget: null };
-          } else if (r < wp + cp) {
-            autonomousRef.current = { mode: 'chase-tail', startMs: ts, walkTarget: null };
-          } else if (r < wp + cp + rp) {
-            autonomousRef.current = { mode: 'roll', startMs: ts, walkTarget: null };
-          }
+      // Randomly trigger autonomous behaviors when idle
+      if (baseMode === 'idle') {
+        const r = Math.random();
+        const wp = anim.walkChance * dt;
+        const cp = anim.chaseTailChance * dt;
+        const rp = anim.rollChance * dt;
+        if (r < wp) {
+          autonomousRef.current = { mode: 'walk', startMs: ts, walkTarget: null };
+        } else if (r < wp + cp) {
+          autonomousRef.current = { mode: 'chase-tail', startMs: ts, walkTarget: null };
+        } else if (r < wp + cp + rp) {
+          autonomousRef.current = { mode: 'roll', startMs: ts, walkTarget: null };
         }
-        return;
       }
-
-      // follow mode
-      const { x: mx, y: my } = mouseRef.current;
-      const vw = window.innerWidth;
-      const vh = window.innerHeight;
-      const target = clampPosition(
-        mx - OVERLAY_OUTER_WIDTH / 2,
-        my - OVERLAY_OUTER_HEIGHT * 0.48,
-        vw, vh, OVERLAY_OUTER_WIDTH, OVERLAY_OUTER_HEIGHT
-      );
-      const smoothing = Math.min(1, anim.followSmoothness * dt);
-      const nextLeft = prev.left + (target.left - prev.left) * smoothing;
-      const nextTop = prev.top + (target.top - prev.top) * smoothing;
-      const dx = nextLeft - prev.left;
-      const dy = nextTop - prev.top;
-      const velLerp = Math.min(1, 28 * dt);
-      velocityRef.current.x += (Math.max(-1.5, Math.min(1.5, (dx / OVERLAY_OUTER_WIDTH) * 18)) - velocityRef.current.x) * velLerp;
-      velocityRef.current.y += (Math.max(-1.25, Math.min(1.25, (dy / OVERLAY_OUTER_HEIGHT) * 14)) - velocityRef.current.y) * velLerp;
-      applyPosition(clampPosition(nextLeft, nextTop, vw, vh, OVERLAY_OUTER_WIDTH, OVERLAY_OUTER_HEIGHT));
-      behaviorModeRef.current = 'follow';
     }
 
     rafId = window.requestAnimationFrame(loop);
