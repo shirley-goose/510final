@@ -31,6 +31,8 @@ import './companion-overlay.css';
 
 type CompanionOverlayProps = {
   standalone?: boolean;
+  /** Model URL injected directly (e.g. from extension URL param) — skips Supabase lookup. */
+  overrideModelUrl?: string;
   /**
    * When true the overlay is running inside a Chrome-extension iframe.
    * Mouse events arrive via postMessage instead of direct DOM listeners,
@@ -77,7 +79,7 @@ function pickRandomWalkTarget(vw: number, vh: number): { left: number; top: numb
   };
 }
 
-export default function CompanionOverlay({ standalone = false, iframeMode = false }: CompanionOverlayProps) {
+export default function CompanionOverlay({ standalone = false, iframeMode = false, overrideModelUrl }: CompanionOverlayProps) {
   const pathname = usePathname();
   const [modelUrl, setModelUrl] = useState<string | null>(null);
   const [personality, setPersonality] = useState<CompanionPersonality>('calm');
@@ -144,6 +146,12 @@ export default function CompanionOverlay({ standalone = false, iframeMode = fals
   const refreshModelUrl = useCallback(async () => {
     try {
       if (typeof window === 'undefined') return;
+
+      // Extension iframe mode: model URL passed directly via URL param
+      if (overrideModelUrl?.startsWith('http')) {
+        setModelUrl(overrideModelUrl);
+        return;
+      }
 
       const supabase = getSupabaseClient();
 
@@ -220,7 +228,7 @@ export default function CompanionOverlay({ standalone = false, iframeMode = fals
     } catch {
       /* ignore transient Supabase/network errors */
     }
-  }, []);
+  }, [overrideModelUrl]);
 
   useEffect(() => {
     void refreshModelUrl();
